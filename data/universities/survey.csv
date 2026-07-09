@@ -1,0 +1,15 @@
+university,granularity,scope,format,url,note
+慶應義塾大学,企業別人数あり,大学全体＋学部/研究科クロス表・直近5年度,PDF(Google Drive),https://www.students.keio.ac.jp/com/career/service/date.html,「上位就職先企業」と「3名以上就職先企業一覧」。法人番号を基準に就職先を管理と明記。DriveのファイルIDが年度ごとに変わる
+一橋大学 商学部,企業別人数あり,学部単位のみ,HTML,https://www.cm.hit-u.ac.jp/career/achievement/,大学サイトではなく学部サイト。他学部は別途
+上智大学,企業別人数あり,大学全体,PDF,https://www.sophia.ac.jp/assets/uploads/2025/05/2024_JobSearchReport.pdf,SOPHIA JOB SEARCH REPORT。URLに年度が埋まっており毎年変わる
+神戸大学,社名のみ（人数なし）,学部別,PDF,https://www.career.kobe-u.ac.jp/images/various_data/shushokusaki_main/2023_shushokusaki_main.pdf,「●企業名」の羅列
+立教大学,社名のみ（人数なし）,大学全体,HTML,https://www.rikkyo.ac.jp/about/disclosure/career/,
+立命館大学,社名のみ（人数なし）,大学全体,PDF,https://www.ritsumei.ac.jp/career/assets/files/introduction/placementdata2024.pdf,PLACEMENT DATA
+東京大学,企業別なし（産業分類別の人数のみ）,学部別,PDF,https://www.u-tokyo.ac.jp/ja/admissions/adm-data/e09_01.html,日本標準産業分類の大分類A〜S別。「三菱商事」「就職先」の語が0回。企業別人数は東京大学新聞社（学生新聞）の集計であって大学公式ではない
+京都大学,企業別なし（産業別集計のみ）,大学全体,HTML/PDF,https://www.kyoto-u.ac.jp/ja/about/data/careers,
+東北大学,企業別なし（産業別就職者数）,大学全体,HTML,https://www.tohoku.ac.jp/japanese/profile/about/06/about0605/,
+明治大学,企業名が出てこない,—,HTML,https://www.meiji.ac.jp/shushoku/date.html,企業別の就職者数は「就職キャリア支援センター報告書」でセンター閲覧のみ＝Web非公開
+中央大学,企業名が出てこない,—,HTML,https://www.chuo-u.ac.jp/career/center/employment_data/2023/,
+大阪大学,未確認,—,—,https://www.osaka-u.ac.jp/ja/campus/career/data,robots.txt がタイムアウトを繰り返し判定できず
+早稲田大学,取得しない,—,—,https://www.waseda.jp,Cloudflare が bot・ブラウザ双方のUAに403。プログラムからのアクセスを拒否
+同志社大学,取得しない,—,—,https://www.doshisha.ac.jp,WAF(awselb) が bot を名乗るUAにのみ403。ブラウザ偽装はアクセス制御の回避なので行わない
