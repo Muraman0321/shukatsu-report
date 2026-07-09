@@ -1,0 +1,88 @@
+name: 週次チェック
+
+# 対象27社の有価証券報告書は135件すべて6月提出・3月期である。
+# つまりこのジョブは1年のうち51週、何も起きないことを確認して終わる。
+# それでよい。留学中に「何も起きていない」と分かることに意味がある。
+#
+# 新しい有報を見つけたら Issue を立てる。取り込み自体は手元で行う——
+# 原本のキャッシュ（約300MB）はCIに置かないし、置く必要もない。
+# 数字を公開する前に人が見る、という設計をCIで崩さない。
+
+on:
+  schedule:
+    - cron: "23 0 * * 1"      # 毎週月曜 09:23 JST（UTC 00:23）
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install --quiet requests python-dotenv
+
+      - name: サイトが生きているか
+        run: |
+          for p in / /gyoukai/sogo-shosha.html /kigyou/mitsubishi-corporation.html; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://shukatsu-report.onrender.com$p")
+            echo "$code  $p"
+            [ "$code" = "200" ] || exit 1
+          done
+
+      - name: 新しい有報が出ていないか
+        id: edinet
+        env:
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+        # 終了コード 3 = 新しい有報あり。0 = 何もなし。それ以外は本当の失敗。
+        # tee を挟むと $? が tee のものになるので、直接リダイレクトして受ける。
+        run: |
+          set +e
+          python update.py --ci new_filings.md > out.txt 2>&1
+          code=$?
+          set -e
+          cat out.txt
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+
+      - name: 何もなければここで終わり
+        if: steps.edinet.outputs.code == '0'
+        run: echo "新しい有価証券報告書はありません。" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 想定外の失敗
+        if: steps.edinet.outputs.code != '0' && steps.edinet.outputs.code != '3'
+        run: cat out.txt && exit 1
+
+      - name: 新しい有報を見つけたら Issue を立てる
+        if: steps.edinet.outputs.code == '3'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const list = fs.readFileSync('new_filings.md', 'utf8');
+            const body = [
+              '週次チェックが、まだ取り込んでいない有価証券報告書を見つけました。',
+              '',
+              list,
+              '',
+              '## 取り込み方（手元で）',
+              '```bash',
+              'python update.py --apply',
+              '```',
+              '検証（提出会社の従業員数をPDFから読めたか／平均年収が前年比±40%以内か）を',
+              '通ったときだけ push されます。止まったら数字を人が確かめてください。',
+              '',
+              '取り込んだあと `python write_prose.py --submit` を実行すると解説文も更新されます（任意）。',
+            ].join('\n');
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `新しい有価証券報告書が提出されています（${new Date().toISOString().slice(0,10)}）`,
+              body,
+            });

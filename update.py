@@ -110,6 +110,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true", help="取得・検証・生成まで行う")
     ap.add_argument("--no-push", action="store_true")
+    ap.add_argument("--ci", metavar="OUT", help="新しい有報があればOUTに一覧を書き、終了コード3で抜ける")
     a = ap.parse_args()
 
     new = find_new()
@@ -122,6 +123,13 @@ def main() -> None:
         print(f"  {r['filer_name']}  {r['period_end']}期  {r['doc_id']}")
     if not a.apply:
         print("\n取り込むには --apply を付けて実行してください。")
+        # CIでは終了コードで知らせる。原本のキャッシュ（約300MB）はCIに無いので、
+        # 取り込み自体は手元で行う。対象27社の有報は135件すべて6月提出なので、
+        # 見張りが鳴るのは年に一度だけである。
+        if a.ci:
+            summary = "\n".join(f"- {r['filer_name']}　{r['period_end']}期　`{r['doc_id']}`" for r in new)
+            Path(a.ci).write_text(summary, encoding="utf-8")
+            raise SystemExit(3)
         return
 
     before = snapshot()
