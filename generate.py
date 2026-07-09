@@ -70,10 +70,30 @@ SLUG = {
     "E03847": "tokio-marine-hd", "E03854": "ms-and-ad", "E23924": "sompo-hd",
     "E04430": "ntt", "E04425": "kddi", "E04426": "softbank",
     "E03855": "mitsui-fudosan", "E03856": "mitsubishi-estate", "E03907": "sumitomo-realty",
+    "E04235": "nippon-yusen", "E04236": "mol", "E04237": "kawasaki-kisen",
+    "E00919": "takeda", "E00920": "astellas", "E00984": "daiichi-sankyo",
+    "E00939": "eisai", "E00932": "chugai",
+    "E00436": "ajinomoto", "E21902": "meiji-holdings", "E00457": "nissin-foods",
+    "E00395": "kirin", "E00394": "asahi-group",
+    "E00776": "shinetsu-chemical", "E00808": "mitsubishi-chemical", "E00877": "asahi-kasei",
+    "E00752": "sumitomo-chemical", "E00873": "toray",
+    "E00058": "kajima", "E00052": "taisei", "E00055": "obayashi", "E00053": "shimizu",
+    "E01225": "nippon-steel", "E01264": "jfe", "E01231": "kobe-steel",
+    "E04147": "jr-east", "E04149": "jr-central", "E04148": "jr-west",
+    "E04273": "ana", "E04272": "jal", "E38082": "skymark",
+    "E03462": "seven-and-i", "E03217": "fast-retailing", "E03061": "aeon",
+    "E03752": "nomura", "E03753": "daiwa-securities", "E05159": "sbi",
+    "E04498": "tepco", "E04499": "kansai-electric", "E04502": "chubu-electric",
+    "E02126": "mitsubishi-heavy", "E01532": "komatsu", "E01570": "daikin",
+    "E01630": "terumo", "E02272": "olympus", "E02271": "nikon", "E02274": "canon",
 }
 GROUP_SLUG = {
     "総合商社": "sogo-shosha", "電気機器": "denki-kiki", "輸送用機器": "yusoyo-kiki",
     "銀行業": "ginko", "保険業": "hoken", "情報・通信業": "joho-tsushin", "不動産業": "fudosan",
+    "海運": "kaiun", "医薬品": "iyakuhin", "食料品": "shokuryohin", "化学": "kagaku",
+    "建設業": "kensetsu", "鉄鋼": "tekko", "陸運": "rikuun", "空運": "kuuun",
+    "小売": "kouri", "証券": "shoken", "電力": "denryoku", "機械": "kikai",
+    "精密機器": "seimitsu-kiki",
 }
 
 NA = '<span class="na">非公表</span>'
@@ -233,6 +253,30 @@ def holding_warning(c: dict) -> str:
 </div>"""
 
 
+STALE_DAYS = 300  # 決算期の違い（12月期と3月期で最大3ヶ月）を超えて古いもの
+
+
+def _period(c: dict) -> dt.date:
+    return dt.date.fromisoformat(c["latest"]["source"]["period_end"])
+
+
+def stale_note(c: dict, newest: dt.date) -> str:
+    """最新の有報が他社より一世代古い会社を黙って並べない。
+
+    アサヒグループHDは2025年12月期の有報を2026年7月時点で提出しておらず、
+    最新は2024年12月期にとどまる。数字を消すのではなく、古いと書く。
+    """
+    gap = (newest - _period(c)).days
+    if gap < STALE_DAYS:
+        return ""
+    return f"""<div class="warn">
+<strong>この会社の数値は他社より古い期のものです。</strong>
+掲載しているのは<b>{e(c["latest"]["source"]["period_end"][:7])}期</b>の有価証券報告書で、
+これがEDINETで確認できる最新のものです（同じ表に並ぶ他社は{e(newest.isoformat()[:7])}期）。
+以後の事業年度の有価証券報告書は、当サイトのデータ取得時点で提出されていません。
+</div>"""
+
+
 def trend_breaks(c: dict) -> str:
     out = []
     if not c["salary_trend_comparable"]:
@@ -270,13 +314,15 @@ def bars(series: dict, fmt) -> str:
 
 
 def change_rate(series: dict) -> str:
+    """「5年で」と決め打ちしない。決算期は企業ごとに違い（12月期・2月期・8月期）、
+    上場が新しい会社は5期そろわない。実際に手元にある最初と最後の期を書く。"""
     items = sorted(series.items())
     if len(items) < 2:
         return NA
     (k0, v0), (k1, v1) = items[0], items[-1]
     r = (v1 / v0 - 1) * 100
     cls = "up" if r > 0 else "down"
-    return f'<span class="{cls}">{r:+.1f}%</span>（{e(k0[:7])}→{e(k1[:7])}）'
+    return f'{e(k0[:7])}期 → {e(k1[:7])}期で <span class="{cls}">{r:+.1f}%</span>'
 
 
 def childcare_cell(ratio, method) -> str:
@@ -306,7 +352,7 @@ SALARY_CAVEAT = (
 
 # ---------------------------------------------------------------- 企業ページ
 
-def company_page(c: dict, peers: list[dict], fetched: str) -> str:
+def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> str:
     L = c["latest"]
     emp, rc, div = L["employees"], L["reporting_company"], L["diversity"]
     src = L["source"]
@@ -375,7 +421,7 @@ def company_page(c: dict, peers: list[dict], fetched: str) -> str:
 </section>"""
 
     salary_trend = (
-        f'<p class="rate">5年で {change_rate(c["trend"]["average_annual_salary_yen"])}</p>'
+        f'<p class="rate">{change_rate(c["trend"]["average_annual_salary_yen"])}</p>'
         if c["salary_trend_comparable"] else ""
     )
 
@@ -412,6 +458,7 @@ def company_page(c: dict, peers: list[dict], fetched: str) -> str:
 <h1>{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
 <p class="lead">有価証券報告書（{e(period)}期）から機械的に抽出した数値です。業種：{e(c["industry"])}／証券コード {e(c["sec_code"][:4])}</p>
 
+{stale_note(c, newest)}
 {holding_warning(c)}
 {trend_breaks(c)}
 {prose_html}
@@ -423,10 +470,10 @@ def company_page(c: dict, peers: list[dict], fetched: str) -> str:
 </section>
 
 <section>
-<h2>平均年間給与の5年推移</h2>
+<h2>平均年間給与の推移</h2>
 {salary_trend}
 {bars(c["trend"]["average_annual_salary_yen"], man)}
-<h3>従業員数（提出会社）の5年推移</h3>
+<h3>従業員数（提出会社）の推移</h3>
 {bars(c["trend"]["employees_reporting_company"], lambda v: num(v, "人"))}
 </section>
 
@@ -457,6 +504,8 @@ def company_page(c: dict, peers: list[dict], fetched: str) -> str:
 # ---------------------------------------------------------------- 業界ページ
 
 PEER_COLS = [
+    # 決算期を必ず出す。同じ業界でも12月期・2月期・8月期が混じり、並べる年度が違う
+    ("決算期", lambda c: c["latest"]["source"]["period_end"][:7], lambda v: f"{e(v)}期", False),
     ("平均年間給与", lambda c: c["latest"]["reporting_company"]["average_annual_salary_yen"], man, True),
     ("平均年齢", lambda c: c["latest"]["reporting_company"]["average_age_years"], lambda v: dec1(v, "歳"), False),
     ("平均勤続年数", lambda c: c["latest"]["reporting_company"]["average_tenure_years"], lambda v: dec1(v, "年"), True),
@@ -468,6 +517,8 @@ PEER_COLS = [
 
 
 def group_page(group: str, members: list[dict], fetched: str) -> str:
+    newest = max(_period(c) for c in members)
+    stale: list[str] = []
     members = sorted(
         members,
         key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], reverse=True),
@@ -482,13 +533,20 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
             v = get(c)
             cells.append(f"<td>{fmt(v) if v is not None else NA}</td>")
         mark = ' <span class="hd" title="持株会社">持株</span>' if c.get("is_holding") else ""
+        if (newest - _period(c)).days >= STALE_DAYS:
+            mark += ' <span class="stale" title="他社より古い期">古い期</span>'
+            stale.append(c["short"])
         rows.append(
             f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{e(c["short"])}</a>{mark}</th>'
             + "".join(cells) + "</tr>"
         )
+    stale_caveat = (
+        f'<p class="caveat"><b>{e("、".join(stale))}</b> は最新の有価証券報告書がまだ提出されていないため、'
+        "一世代前の期の数値です。決算期の列を確認してください。</p>" if stale else ""
+    )
     main_table = f"""<div class="scroll"><table class="grid rank">
 <thead><tr><th>会社</th>{head}</tr></thead>
-<tbody>{"".join(rows)}</tbody></table></div>"""
+<tbody>{"".join(rows)}</tbody></table></div>{stale_caveat}"""
 
     # 5年推移は基準変更のあった会社を落とす。落とした事実を必ず書く。
     trend_rows, excluded = [], []
@@ -501,9 +559,12 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
             continue
         trend_rows.append((c, s[0], s[-1], s[-1][1] / s[0][1] - 1))
     trend_rows.sort(key=lambda x: -x[3])
+    # 決算期は行ごとに違いうる（12月期・2月期・8月期）。列見出しに年度を書くと嘘になるので、
+    # 値の下にその行の期を添える。上場が新しい会社は5期そろわない。
     tr = "".join(
         f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{e(c["short"])}</a></th>'
-        f'<td>{man(a[1])}</td><td>{man(b[1])}</td>'
+        f'<td>{man(a[1])}<br><span class="small">{e(a[0][:7])}期</span></td>'
+        f'<td>{man(b[1])}<br><span class="small">{e(b[0][:7])}期</span></td>'
         f'<td class="{"up" if r > 0 else "down"}">{r * 100:+.1f}%</td></tr>'
         for c, a, b, r in trend_rows
     )
@@ -512,10 +573,8 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
         "増減率を出していません（各社ページに有報の注記を掲示しています）。</p>"
         if excluded else ""
     )
-    y0 = min(sorted(c["trend"]["average_annual_salary_yen"])[0] for c, *_ in trend_rows)[:7] if trend_rows else ""
-    y1 = max(sorted(c["trend"]["average_annual_salary_yen"])[-1] for c, *_ in trend_rows)[:7] if trend_rows else ""
     trend_table = f"""<div class="scroll"><table class="grid rank">
-<thead><tr><th>会社</th><th>{e(y0)}期</th><th>{e(y1)}期</th><th>5年増減率</th></tr></thead>
+<thead><tr><th>会社</th><th>最も古い期</th><th>直近の期</th><th>増減率</th></tr></thead>
 <tbody>{tr}</tbody></table></div>{excl}"""
 
     cc = "".join(
@@ -563,15 +622,15 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 広告主の都合が入らないよう、掲載企業に費用は請求していません。並び順は平均年間給与の高い順です。</p>
 
 <section>
-<h2>基本データ（最新期・提出会社）</h2>
+<h2>基本データ（提出会社）</h2>
 {main_table}
 <p class="caveat">{SALARY_CAVEAT}</p>
 <p class="caveat">{WAGE_CAVEAT}</p>
 </section>
 
 <section>
-<h2>平均年間給与の5年増減率</h2>
-<p class="lead">いま高いかではなく、<b>伸びているか</b>。新卒で入って数年後に受け取る額はこちらに近い。</p>
+<h2>平均年間給与の推移と増減率</h2>
+<p class="lead">いま高いかではなく、<b>伸びているか</b>。新卒で入って数年後に受け取る額はこちらに近い。決算期は会社ごとに違うため、各行に期を添えています。</p>
 {trend_table}
 </section>
 
@@ -591,7 +650,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 """
     names = "・".join(c["short"] for c in members)
     title = f"{group}{len(members)}社の平均年収・男女の賃金の差異 横比較｜{SITE_NAME}"
-    desc = f"{names}の平均年間給与・平均勤続年数・女性管理職比率・男女の賃金の差異・男性育休取得率を、有価証券報告書だけを出典に1つの表で比較。5年増減率つき。"
+    desc = f"{names}の平均年間給与・平均勤続年数・女性管理職比率・男女の賃金の差異・男性育休取得率を、有価証券報告書だけを出典に1つの表で比較。給与の推移と増減率つき。"
     return page(title, desc, body, depth=1, canonical=f"/gyoukai/{GROUP_SLUG.get(group, group)}.html")
 
 
@@ -619,7 +678,7 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
 このサイトは掲載企業から1円も受け取らず、<b>金融庁EDINETの有価証券報告書だけ</b>を出典にして、{len(companies)}社を並べます。
 </p>
 <p class="lead small">
-数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社×5年＝135件）。
+数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社・計{sum(len(c["years"]) for c in companies)}件の有価証券報告書）。
 AIに数字を書かせていません。データが無い項目は推測で埋めず「非公表」と書きます。
 </p>
 <div class="cards">{"".join(cards)}</div>
@@ -631,7 +690,7 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 <p>{SALARY_CAVEAT}</p>
 <p><b>持株会社（◯◯フィナンシャル・グループ、◯◯ホールディングス）の平均年収には注意してください。</b>
 それは持株会社本体の数百〜数千人の数字で、実際の勤務先である銀行や保険会社の水準ではありません。各ページに事業会社の指標を併記しています。</p>
-<p><b>3年以内離職率は載せていません。</b>大手企業はこれを公的に開示しておらず、厚労省「しょくばらぼ」にも掲載がないためです（実測：対象24社すべて空欄）。
+<p><b>3年以内離職率は載せていません。</b>大手企業はこれを公的に開示しておらず、厚労省「しょくばらぼ」にも掲載がないためです（全掲載148,228社を調べたところ、この項目を埋めているのは1.8%＝中小企業層だけで、大手はすべて空欄でした）。
 推測値を置くくらいなら空けておきます。代わりに<b>平均勤続年数</b>を定着の代理指標として使ってください。</p>
 </section>
 
@@ -643,7 +702,11 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 </section>
 """
     title = f"{SITE_NAME}｜{TAGLINE}"
-    desc = f"総合商社・銀行・保険・商社ほか{len(companies)}社の平均年収、男女の賃金の差異、女性管理職比率、男性育休取得率を有価証券報告書だけを出典に横比較。5年推移つき。広告主からの掲載料を受け取らない就活データサイト。"
+    desc = (
+        f"総合商社・銀行・保険・医薬品・海運ほか{len(groups)}業界{len(companies)}社の平均年収、男女の賃金の差異、"
+        "女性管理職比率、男性育休取得率を有価証券報告書だけを出典に横比較。給与の推移つき。"
+        "広告主からの掲載料を受け取らない就活データサイト。"
+    )
     return page(title, desc, body, depth=0, canonical="/index.html")
 
 
@@ -681,6 +744,7 @@ table{border-collapse:collapse;width:100%}
 .grid .parent{text-align:left;color:var(--mut);font-size:12px}
 .rank tbody tr:first-child{background:#fbf9ef}
 .hd{font-size:10px;background:#eee;color:#555;padding:1px 4px;border-radius:3px;vertical-align:middle}
+.stale{font-size:10px;background:#fdeeda;color:#8a5a12;padding:1px 4px;border-radius:3px;vertical-align:middle}
 .method{font-size:10px;padding:1px 4px;border-radius:3px;white-space:nowrap}
 .method1{background:#e8f2e8;color:#245c24}
 .method2{background:#fdeeda;color:#8a5a12}
@@ -725,6 +789,7 @@ def main() -> None:
     groups: dict[str, list[dict]] = {}
     for c in companies:
         groups.setdefault(c["peer_group"], []).append(c)
+    newest = max(_period(c) for c in companies)
 
     if SITE.exists():
         shutil.rmtree(SITE)
@@ -742,7 +807,7 @@ def main() -> None:
         urls.append(path)
     for c in companies:
         path = f"/kigyou/{c['slug']}.html"
-        (SITE / path.lstrip("/")).write_text(company_page(c, groups[c["peer_group"]], fetched), encoding="utf-8")
+        (SITE / path.lstrip("/")).write_text(company_page(c, groups[c["peer_group"]], fetched, newest), encoding="utf-8")
         urls.append(path)
 
     # クライアント側の絞り込み用（Layer 2 で使う）。サーバーは要らない。

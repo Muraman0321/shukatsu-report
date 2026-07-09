@@ -172,6 +172,99 @@ def pdf_table_employees(pdf: Path, salary: int) -> tuple[int | None, str]:
     return None, ""
 
 
+# ---------------------------------------------------------------------------
+# 第二の読み方：表のセル位置で読む
+#
+# 上の pdf_table_employees は「従業員数の見出しから給与の値までの最初の整数」を採る。
+# これは1行1社の表を前提にしており、次の2つで壊れる。
+#
+#   多行表   商船三井「陸上1,046 / 海上387 / 合計1,433」   → 最初の整数は陸上
+#            スカイマーク「地上/運航/客室/合計又は平均」    → 最初の整数は地上社員
+#   転置表   本田技研（〜2023年3月期）「前事業年度|当事業年度|増減」→ 最初の整数は前期
+#
+# ただしセル位置方式にも弱点があり、全件に当てると別の7件（本田2024以降・野村HD）で
+# 誤る。だから **テキスト方式がXBRLのどちらのタグとも一致しなかったときだけ** 呼ぶ。
+# そして一致が得られない限り採用しない。裁定者はPDFのままで、裁定結果が
+# 候補のどれでもないなら黙って通さない。
+# ---------------------------------------------------------------------------
+
+PURE_INT = re.compile(r"^\d{1,3}(?:,\d{3})*$|^\d{2,7}$")
+ROW_TOL = 8.0
+MAX_EMPLOYEES = 1_000_000
+
+
+def _cx(r) -> float:
+    return (r[0] + r[2]) / 2
+
+
+def _cy(r) -> float:
+    return (r[1] + r[3]) / 2
+
+
+def _dist(a, b) -> float:
+    return abs(_cx(a) - _cx(b)) + abs(_cy(a) - _cy(b))
+
+
+def _ints_in_row(words, y: float, x_min: float, exclude: int | None) -> list[tuple[float, int]]:
+    """行 y の「括弧のない純粋な整数」を左から。臨時従業員数（括弧内）や△は落ちる。"""
+    out = []
+    for w in words:
+        if abs(_cy(w) - y) >= ROW_TOL or _cx(w) <= x_min:
+            continue
+        t = w[4].strip()
+        if not PURE_INT.match(t):
+            continue
+        v = int(t.replace(",", ""))
+        if v != exclude and 1 <= v <= MAX_EMPLOYEES:
+            out.append((_cx(w), v))
+    return sorted(out)
+
+
+def cellwise_employees(pdf: Path, salary: int) -> tuple[int | None, str]:
+    doc = fitz.open(pdf)
+    try:
+        for needle in (f"{salary:,}", f"{salary // 1000:,}"):
+            for page in doc:
+                sal_vals = page.search_for(needle)
+                if not sal_vals:
+                    continue
+                sal_labels = page.search_for("平均年間給与")
+                emp_labels = page.search_for("従業員数")
+                if not sal_labels or not emp_labels:
+                    continue
+                words = page.get_text("words")
+                for W in sal_vals:
+                    S = min(sal_labels, key=lambda r: _dist(r, W))
+                    if _dist(S, W) > 400:
+                        continue
+
+                    if abs(_cy(S) - _cy(W)) < ROW_TOL:
+                        # 転置表：給与の値がその行で何番目かを数え、従業員数の行の同じ番目を採る
+                        L = min((r for r in emp_labels if _cy(r) < _cy(S)),
+                                key=lambda r: abs(_cx(r) - _cx(S)), default=None)
+                        if L is None:
+                            continue
+                        row = _ints_in_row(words, _cy(W), _cx(S), None)
+                        k = next((i for i, (x, _) in enumerate(row) if abs(x - _cx(W)) < 1.0), None)
+                        emp_row = _ints_in_row(words, _cy(L), _cx(L), None)
+                        if k is None or k >= len(emp_row):
+                            continue
+                        return emp_row[k][1], "転置表"
+
+                    # 通常表：給与と同じ行の整数のうち、従業員数の見出しに横位置がいちばん近いもの。
+                    # 閾値を使ってはいけない（見出しは左寄せ・値は中央寄せで35pt以上ずれる）。
+                    L = min((r for r in emp_labels if abs(_cy(r) - _cy(S)) < ROW_TOL and _cx(r) < _cx(S)),
+                            key=lambda r: _cx(r), default=None)
+                    if L is None:
+                        continue
+                    row = _ints_in_row(words, _cy(W), 0.0, salary)
+                    if row:
+                        return min(row, key=lambda p: abs(p[0] - _cx(L)))[1], "通常表"
+    finally:
+        doc.close()
+    return None, ""
+
+
 def main() -> None:
     with (ROOT / "companies.csv").open(encoding="utf-8", newline="") as f:
         names = {r["edinet_code"]: r["name"] for r in csv.DictReader(f)}
@@ -193,15 +286,29 @@ def main() -> None:
 
         # 有報PDFの表が正本。XBRLはどの要素・どのコンテキストに置くかが企業ごとに違うため、
         # 照合相手として使うにとどめる。
-        resolved = pdf_val
+        #
+        # ただし「PDFの値がXBRLのどちらのタグとも一致しない」ときは、PDFの読み方を
+        # 間違えている可能性が高い（多行表の小計・転置表の前期列を拾っている）。
+        # そのときだけセル位置方式で読み直し、**一致が得られたときだけ**採用する。
+        layout = ""
+        if pdf_val is not None and pdf_val not in (std, ext) and salary is not None:
+            alt, layout = cellwise_employees(pdf_path, salary)
+            if alt is not None and alt in (std, ext):
+                pdf_val = alt
+            else:
+                layout = f"再読込も不一致({alt})" if alt is not None else "再読込も読めず"
+
         if pdf_val is None:
-            verdict, source = "PDFから読めず（要 human review）", ""
+            verdict, source, resolved = "PDFから読めず（要 human review）", "", None
         elif pdf_val == std:
-            verdict, source = "XBRL標準タグと一致", "有報PDF（標準タグと一致）"
+            verdict = "XBRL標準タグと一致" + (f"（セル位置方式・{layout}）" if layout else "")
+            source, resolved = "有報PDF（標準タグと一致）", pdf_val
         elif pdf_val == ext:
-            verdict, source = f"XBRL拡張タグと一致({ext_name})", "有報PDF（拡張タグと一致）"
+            verdict = f"XBRL拡張タグと一致({ext_name})" + (f"（セル位置方式・{layout}）" if layout else "")
+            source, resolved = "有報PDF（拡張タグと一致）", pdf_val
         else:
-            verdict, source = "XBRLのどのタグとも不一致", "有報PDF"
+            # どの読み方でもXBRLと合わない。推測で埋めず、公開しない。
+            verdict, source, resolved = f"要 human review：XBRLと不一致（PDF={pdf_val} {layout}）", "", None
 
         if resolved is None:
             flagged.append(f"{c['name']}({filing['period_end']})")
