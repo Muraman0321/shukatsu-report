@@ -18,7 +18,8 @@ XBRLの標準タグ jpcrp_cor:NumberOfEmployees @NonConsolidatedMember は、
 そこで有報PDFを正本とし、平均年間給与の値をアンカーにして表を読む。
 XBRLは照合相手にすぎない。一致しなければ human review に回す。
 
-    python verify_employees.py            # 27社を判定し data/employees_verified.csv を書く
+    python verify_employees.py            # 未判定の書類だけを読み、data/employees_verified.csv を更新
+    python verify_employees.py --full     # 抽出ロジックを直したときは全件やり直す
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from __future__ import annotations
 import csv
 import io
 import re
+import sys
 import zipfile
 from pathlib import Path
 
@@ -265,16 +267,35 @@ def cellwise_employees(pdf: Path, salary: int) -> tuple[int | None, str]:
     return None, ""
 
 
+def _existing() -> dict[str, dict[str, str]]:
+    """すでに判定済みの書類。docIDごとに1行。有報は一度出れば内容が変わらないので読み直さない。"""
+    if not OUT.exists():
+        return {}
+    with OUT.open(encoding="utf-8-sig", newline="") as f:
+        return {r["doc_id"]: r for r in csv.DictReader(f)}
+
+
 def main() -> None:
+    full = "--full" in sys.argv  # 抽出ロジックを直したときは全件やり直す
     with (ROOT / "companies.csv").open(encoding="utf-8", newline="") as f:
         names = {r["edinet_code"]: r["name"] for r in csv.DictReader(f)}
     with (ROOT / "data" / "doc_index.csv").open(encoding="utf-8", newline="") as f:
         filings = [r for r in csv.DictReader(f) if r["edinet_code"] in names]
 
+    done = {} if full else _existing()
+    if done:
+        print(f"判定済み {len(done)}件はPDFを読み直しません（--full で全件やり直す）")
+
     out_rows, flagged = [], []
     for filing in sorted(filings, key=lambda r: (r["edinet_code"], r["period_end"])):
         c = {"edinet_code": filing["edinet_code"], "name": names[filing["edinet_code"]]}
         doc_id = filing["doc_id"]
+        if doc_id in done:
+            row = done[doc_id]
+            out_rows.append(row)
+            if not (row["resolved_employees"] or "").strip():
+                flagged.append(f"{c['name']}({filing['period_end']})")
+            continue
         if not (DOCS / f"{doc_id}_type5.zip").exists() or not (DOCS / f"{doc_id}_type2.pdf").exists():
             print(f"  skip {c['name']} {filing['period_end']}: CSVかPDFが未取得")
             continue
