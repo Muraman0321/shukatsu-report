@@ -33,8 +33,8 @@
 ## 使い方
 
 ```bash
-python fetch_edinet.py find --from 2021-06-01 --to 2026-07-09   # 書類一覧 → data/doc_index.csv
-python fetch_edinet.py get --types 5 2                          # XBRL(CSV) と PDF を取得（1req/秒）
+python fetch_edinet.py find --from 2026-06-01 --to 2026-06-30 --append  # 書類一覧 → data/doc_index.csv
+python fetch_edinet.py get --types 5,2                          # XBRL(CSV) と PDF を取得（1req/秒。カンマ区切り）
 python verify_employees.py                                      # 有報PDFと突き合わせ → data/employees_verified.csv
 python extract.py                                               # 機械抽出 → data/companies/*.json
 python generate.py                                              # 静的サイト → site/
