@@ -182,7 +182,7 @@ def main() -> None:
         print("--no-push のため push しません。")
         return
     git("push", "origin", "main")
-    print("push 完了。Render が自動デプロイします → https://shukatsu-report.onrender.com")
+    print("push 完了。Render が自動デプロイします → https://shukatsu-data.com")
 
 
 if __name__ == "__main__":

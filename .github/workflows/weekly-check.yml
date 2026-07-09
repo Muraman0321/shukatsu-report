@@ -32,7 +32,7 @@ jobs:
       - name: サイトが生きているか
         run: |
           for p in / /gyoukai/sogo-shosha.html /kigyou/mitsubishi-corporation.html; do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "https://shukatsu-report.onrender.com$p")
+            code=$(curl -s -o /dev/null -w '%{http_code}' "https://shukatsu-data.com$p")
             echo "$code  $p"
             [ "$code" = "200" ] || exit 1
           done

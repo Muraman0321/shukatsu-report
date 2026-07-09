@@ -43,7 +43,7 @@ PROSE = ROOT / "data" / "prose"
 SITE = ROOT / "site"
 
 # 独自ドメイン取得後にここを変える。sitemap.xml の絶対URLに使う。
-BASE_URL = os.getenv("SITE_BASE_URL", "https://shukatsu-report.onrender.com").rstrip("/")
+BASE_URL = os.getenv("SITE_BASE_URL", "https://shukatsu-data.com").rstrip("/")
 SITE_NAME = "就活データ横比較"
 TAGLINE = "有価証券報告書の数字だけで、同業他社を並べる"
 
