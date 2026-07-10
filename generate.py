@@ -33,6 +33,7 @@ import csv
 import datetime as dt
 import html
 import json
+import math
 import os
 import shutil
 from pathlib import Path
@@ -44,7 +45,7 @@ SITE = ROOT / "site"
 
 # 独自ドメイン取得後にここを変える。sitemap.xml の絶対URLに使う。
 BASE_URL = os.getenv("SITE_BASE_URL", "https://shukatsu-data.com").rstrip("/")
-SITE_NAME = "就活データ横比較"
+SITE_NAME = "Shukatsu.com"
 TAGLINE = "有価証券報告書の数字だけで、同業他社を並べる"
 
 EDINET_VIEW = "https://disclosure2.edinet-fsa.go.jp/WZEK0040.aspx?{doc_id}"
@@ -238,7 +239,14 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
 </head>
 <body>
 <header class="site">
-  <a class="brand" href="{up}index.html">{e(SITE_NAME)}</a>
+  <a class="brand" href="{up}index.html">
+    <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
+      <rect x="1" y="12" width="5" height="9" rx="1" fill="#fff"/>
+      <rect x="8.5" y="6" width="5" height="15" rx="1" fill="#fff" opacity=".78"/>
+      <rect x="16" y="1" width="5" height="20" rx="1" fill="#fff" opacity=".5"/>
+    </svg>
+    <span class="brand-word">{e(SITE_NAME)}</span>
+  </a>
   <span class="tagline">{e(TAGLINE)}</span>
 </header>
 <main>
@@ -342,23 +350,109 @@ def trend_breaks(c: dict) -> str:
     return "\n".join(out)
 
 
-def bars(series: dict, fmt) -> str:
-    """5年推移。JSもライブラリも使わない（壊れる部品を増やさない）。"""
+_LC_ID = 0  # <linearGradient id> の衝突を避けるための連番。1ページに複数グラフが乗るため
+
+
+def line_chart(series: dict, fmt) -> str:
+    """年次推移の折れ線グラフ。SVGを直接組み立てる——JSもチャートライブラリも使わない
+    （壊れる部品を増やさない、という設計方針を崩さないため）。
+
+    viewBox 座標系を使い、CSSで width:100% にして親要素の幅に合わせる。
+    データ点が1つしかない年は折れ線にならないので、その場合だけ数値を出す。
+    """
+    global _LC_ID
     if not series:
         return f"<p>{NA}</p>"
     items = sorted(series.items())
-    hi = max(v for _, v in items)
-    lo = min(v for _, v in items)
+    if len(items) < 2:
+        (k, v), = items
+        return f'<p class="rate">{e(k[:7])}期　{fmt(v)}</p>'
+
+    _LC_ID += 1
+    gid = f"lc-fill-{_LC_ID}"
+    W, H = 640, 220
+    pad_l, pad_r, pad_t, pad_b = 8, 8, 30, 28
+    plot_w, plot_h = W - pad_l - pad_r, H - pad_t - pad_b
+    vals = [v for _, v in items]
+    lo, hi = min(vals), max(vals)
     span = (hi - lo) or 1
-    rows = []
-    for k, v in items:
-        w = 12 + 88 * (v - lo) / span  # 最小でも12%の幅を残す（見えなくならないように）
-        rows.append(
-            f'<tr><th scope="row">{e(k[:7])}</th>'
-            f'<td class="bar"><span style="width:{w:.1f}%"></span></td>'
-            f'<td class="barval">{fmt(v)}</td></tr>'
+    n = len(items)
+
+    def px(i: int) -> float:
+        return pad_l + (plot_w * i / (n - 1) if n > 1 else plot_w / 2)
+
+    def py(v: float) -> float:
+        return pad_t + plot_h * (1 - (v - lo) / span)
+
+    pts = [(px(i), py(v)) for i, (_, v) in enumerate(items)]
+    line_path = "M " + " L ".join(f"{x:.1f},{y:.1f}" for x, y in pts)
+    area_path = (
+        line_path
+        + f" L {pts[-1][0]:.1f},{pad_t + plot_h:.1f}"
+        + f" L {pts[0][0]:.1f},{pad_t + plot_h:.1f} Z"
+    )
+    dots = "".join(f'<circle class="chart-dot" cx="{x:.1f}" cy="{y:.1f}" r="4"/>' for x, y in pts)
+
+    # 両端の点はtext-anchor:middleのままだとラベルがviewBox外にはみ出てSVGの
+    # overflow:hiddenで欠ける（実ブラウザで確認して発覚）。両端だけstart/endに寄せる
+    def anchor(i: int) -> str:
+        if n == 1 or 0 < i < n - 1:
+            return "middle"
+        return "start" if i == 0 else "end"
+
+    x_labels = "".join(
+        f'<text class="chart-x" x="{x:.1f}" y="{H - 6}" style="text-anchor:{anchor(i)}">{e(k[:7])}</text>'
+        for i, ((k, _), (x, _)) in enumerate(zip(items, pts))
+    )
+    # 値ラベルは点の上に出す。一番上の点だけはグラフ枠からはみ出るので下に逃がす
+    v_labels = "".join(
+        f'<text class="chart-val" x="{x:.1f}" y="{(y - 12 if y > pad_t + 14 else y + 22):.1f}" style="text-anchor:{anchor(i)}">{fmt(v)}</text>'
+        for i, ((x, y), (_, v)) in enumerate(zip(pts, items))
+    )
+    return f"""<div class="chart-wrap"><svg class="linechart" viewBox="0 0 {W} {H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="年次推移の折れ線グラフ">
+<defs><linearGradient id="{gid}" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0%" stop-color="var(--accent)" stop-opacity=".22"/>
+<stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+</linearGradient></defs>
+<line class="grid-line" x1="{pad_l}" y1="{pad_t + plot_h}" x2="{W - pad_r}" y2="{pad_t + plot_h}"/>
+<path class="chart-area" fill="url(#{gid})" d="{area_path}"/>
+<path class="chart-line" d="{line_path}"/>
+{dots}{x_labels}{v_labels}
+</svg></div>"""
+
+
+def donut(pct_value: float | None, size: int = 96, stroke: int = 11, method: str = "") -> str:
+    """比率1つをドーナツ（リング）グラフで見せる。0〜100%の範囲にクランプして描き、
+    100%を超える値（男性育休取得率など）は中央の数字にそのまま出して視覚的な嘘を避ける。
+    非公表（None）はグレーの空リングに「非公表」とだけ書く——0%と混同しない。
+    """
+    r = (size - stroke) / 2
+    cx = cy = size / 2
+    circumference = 2 * math.pi * r
+    track = f'<circle class="donut-track" cx="{cx}" cy="{cy}" r="{r}" stroke-width="{stroke}"/>'
+    if pct_value is None:
+        return (
+            f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" role="img" aria-label="非公表">'
+            f"{track}"
+            f'<text class="donut-na" x="{cx}" y="{cy}">{NA}</text></svg>'
         )
-    return f'<table class="trend">{"".join(rows)}</table>'
+    # 値の大小で色分けしない（青一色）。「女性管理職比率は低いほど赤」のような評価を
+    # このサイトが下すと、数字に意味づけをしてしまい「事実だけを機械的に出す」という
+    # 設計原則に反する。100%超（男性育休取得率）はリングを満タンにしたうえで中央の
+    # 数字はそのまま実値を出す——リングを101%分描こうとして崩れることはない。
+    clamped = max(0.0, min(pct_value, 100.0))
+    dash = circumference * clamped / 100
+    arc = (
+        f'<circle class="donut-value" cx="{cx}" cy="{cy}" r="{r}" stroke-width="{stroke}" '
+        f'stroke-dasharray="{dash:.2f} {circumference:.2f}" '
+        f'transform="rotate(-90 {cx} {cy})"/>'
+    )
+    label = f"{pct_value:.1f}%"
+    return (
+        f'<svg width="{size}" height="{size}" viewBox="0 0 {size} {size}" role="img" aria-label="{label}">'
+        f"{track}{arc}"
+        f'<text class="donut-center" x="{cx}" y="{cy}">{label}</text></svg>'
+    )
 
 
 def change_rate(series: dict) -> str:
@@ -441,9 +535,27 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
         diversity = "".join(f'<tr><th scope="row">{e(k)}</th><td>{v}</td></tr>' for k, v in div_rows)
         scope = div.get("scope") or "提出会社"
         scope_note = "" if scope == "提出会社" else f'<p class="small">対象範囲：{e(scope)}</p>'
+
+        childcare_ratio = div["male_childcare_leave_ratio"]
+        childcare_pct = childcare_ratio * 100 if childcare_ratio is not None else None
+        method_tag = ""
+        if div["male_childcare_leave_method"]:
+            tag = "第2号方式" if "2号" in div["male_childcare_leave_method"] else "原則方式"
+            mcls = "method2" if tag == "第2号方式" else "method1"
+            method_tag = f'<span class="method {mcls} donut-method">{tag}</span>'
+        donuts = f"""<div class="donuts">
+<div class="donut-item">{donut(div["female_manager_ratio"] * 100 if div["female_manager_ratio"] is not None else None)}
+<div class="donut-label">女性管理職比率</div></div>
+<div class="donut-item">{donut(div["female_to_male_wage_ratio_all"] * 100 if div["female_to_male_wage_ratio_all"] is not None else None)}
+<div class="donut-label">男女の賃金の差異<br>（全労働者）</div></div>
+<div class="donut-item">{donut(childcare_pct)}
+<div class="donut-label">男性育休取得率{method_tag}</div></div>
+</div>"""
+
         diversity_section = f"""<section>
 <h2>多様性の指標</h2>
 {scope_note}
+{donuts}
 <table class="kv">{diversity}</table>
 <p class="caveat">{WAGE_CAVEAT}</p>
 <p class="caveat">{CHILDCARE_CAVEAT}</p>
@@ -477,11 +589,11 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
     if c["trend"].get("female_manager_ratio") or c["trend"].get("female_to_male_wage_ratio_all"):
         div_trend = f"""<div class="col">
   <h3>女性管理職比率</h3>
-  {bars(c["trend"].get("female_manager_ratio", {}), lambda v: pct(v))}
+  {line_chart(c["trend"].get("female_manager_ratio", {}), lambda v: pct(v))}
 </div>
 <div class="col">
   <h3>男女の賃金の差異（全労働者）</h3>
-  {bars(c["trend"].get("female_to_male_wage_ratio_all", {}), lambda v: pct(v))}
+  {line_chart(c["trend"].get("female_to_male_wage_ratio_all", {}), lambda v: pct(v))}
 </div>"""
 
     notes = L.get("notes") or []
@@ -520,9 +632,9 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 <section>
 <h2>平均年間給与の推移</h2>
 {salary_trend}
-{bars(c["trend"]["average_annual_salary_yen"], man)}
+{line_chart(c["trend"]["average_annual_salary_yen"], man)}
 <h3>従業員数（提出会社）の推移</h3>
-{bars(c["trend"]["employees_reporting_company"], lambda v: num(v, "人"))}
+{line_chart(c["trend"]["employees_reporting_company"], lambda v: num(v, "人"))}
 </section>
 
 {diversity_section}
@@ -761,34 +873,35 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 # ---------------------------------------------------------------- CSS
 
 CSS = """:root{
-  --fg:#3a2e35;--mut:#8b7a86;--line:#f1dfe8;--bg:#fffaf6;--card:#ffffff;
-  --accent:#ff6f91;--accent-dk:#e0527a;--link:#7166d9;
-  --warn:#fff1e2;--warnline:#ffb15c;--note:#eef1ff;
-  --up:#3fae7f;--down:#e8637f;
-  --shadow:0 4px 18px rgba(255,111,145,.08),0 1px 3px rgba(58,46,53,.05);
-  --radius:18px;--radius-sm:10px
+  --fg:#12141f;--mut:#66707f;--line:#e3e6ec;--bg:#f5f6f9;--card:#ffffff;
+  --accent:#2f4bd6;--accent-dk:#22399e;--link:#3a52c9;
+  --warn:#fdf6ec;--warnline:#c98a2b;--note:#eef1fc;
+  --up:#0f8a5f;--down:#c53434;
+  --shadow:0 1px 2px rgba(18,20,31,.04),0 8px 24px rgba(18,20,31,.06);
+  --radius:12px;--radius-sm:8px
 }
 *{box-sizing:border-box}
-body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;color:var(--fg);background:var(--bg);line-height:1.8;font-size:16px;-webkit-font-smoothing:antialiased}
-main{max-width:920px;margin:0 auto;padding:0 20px 64px}
-header.site{background:linear-gradient(135deg,#fff5f8,#fef8f0);border-bottom:1px solid var(--line);margin-bottom:32px}
-header.site>*{max-width:920px;margin:0 auto;padding:0 20px}
-.brand{display:block;padding-top:18px;font-weight:800;font-size:19px;color:var(--fg);text-decoration:none;letter-spacing:.02em}
-.brand::before{content:"🎀 ";font-size:15px}
-.tagline{display:block;color:var(--mut);font-size:13px;padding-bottom:16px}
-a{color:var(--link);text-decoration-color:rgba(113,102,217,.35);text-underline-offset:2px}
+body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;color:var(--fg);background:var(--bg);line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased;letter-spacing:.01em}
+main{max-width:960px;margin:0 auto;padding:0 20px 64px}
+header.site{background:linear-gradient(120deg,#10122a 0%,#1d2864 100%)}
+header.site>*{max-width:960px;margin:0 auto;padding:0 20px}
+.brand{display:flex;align-items:center;gap:10px;padding-top:24px;text-decoration:none}
+.brand svg{flex:none}
+.brand-word{font-weight:800;font-size:26px;color:#fff;letter-spacing:-.02em}
+.tagline{display:block;color:#9aa4d9;font-size:13px;padding:4px 0 22px;margin-left:38px}
+a{color:var(--link);text-decoration-color:rgba(58,82,201,.35);text-underline-offset:2px}
 a:hover{text-decoration-color:var(--link)}
-h1{font-size:27px;line-height:1.5;margin:8px 0 14px;font-weight:800}
-h2{font-size:19px;margin:40px 0 12px;padding-bottom:8px;border-bottom:3px solid #ffd9e4;color:var(--fg);font-weight:800}
-h3{font-size:15px;margin:22px 0 8px;color:var(--mut);font-weight:700}
-.crumb{font-size:13px;color:var(--mut);margin:0 0 10px}
+h1{font-size:26px;line-height:1.5;margin:28px 0 14px;font-weight:800;letter-spacing:-.01em}
+h2{font-size:18px;margin:44px 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line);color:var(--fg);font-weight:800;letter-spacing:-.005em}
+h3{font-size:14px;margin:24px 0 8px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.crumb{font-size:13px;color:var(--mut);margin:22px 0 0}
 .crumb a{color:var(--mut)}
-.lead{color:#5a4a52}
+.lead{color:#3d4453}
 .small{font-size:13px;color:var(--mut)}
-.na{color:var(--mut);font-size:13px;background:#f7eef2;padding:1px 7px;border-radius:999px}
-.warn{background:var(--warn);border:1px solid #ffe0bb;border-radius:var(--radius-sm);padding:14px 16px;margin:18px 0;font-size:14px}
-.note{background:var(--note);border:1px solid #dbe0ff;border-radius:var(--radius-sm);padding:14px 16px;margin:18px 0;font-size:14px}
-.warn q,.note q{display:block;margin-top:8px;color:#5a4a52;font-size:13px}
+.na{color:var(--mut);font-size:12.5px;background:#eef0f4;padding:1px 7px;border-radius:4px}
+.warn{background:var(--warn);border:1px solid #f0dfc0;border-left:3px solid var(--warnline);border-radius:var(--radius-sm);padding:14px 16px;margin:18px 0;font-size:14px}
+.note{background:var(--note);border:1px solid #d7ddf7;border-left:3px solid var(--accent);border-radius:var(--radius-sm);padding:14px 16px;margin:18px 0;font-size:14px}
+.warn q,.note q{display:block;margin-top:8px;color:#3d4453;font-size:13px}
 .caveat{font-size:13px;color:var(--mut);margin:10px 0 0;line-height:1.75}
 .processing{font-size:13px;color:var(--mut)}
 table{border-collapse:collapse;width:100%}
@@ -797,48 +910,63 @@ table{border-collapse:collapse;width:100%}
 .kv th{text-align:left;font-weight:600;color:var(--mut);width:15em;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
 .kv td{padding:11px 14px;border-bottom:1px solid var(--line)}
 .kv tr:last-child th,.kv tr:last-child td{border-bottom:none}
-.grid{font-size:14px;min-width:640px;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
+.grid{font-size:13.5px;min-width:640px;border:1px solid var(--line);border-radius:var(--radius-sm);overflow:hidden}
 .grid th,.grid td{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:9px 11px;text-align:right;white-space:nowrap}
 .grid th:last-child,.grid td:last-child{border-right:none}
-.grid thead th{background:#fff0f4;text-align:center;font-size:12px;color:#a15a71;font-weight:700}
+.grid thead th{background:#f7f8fb;text-align:center;font-size:11.5px;color:var(--mut);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 .grid tbody th{text-align:left;font-weight:700}
-.grid tbody tr:hover{background:#fffaf7}
+.grid tbody tr:hover{background:#f7f8fc}
 .grid .parent{text-align:left;color:var(--mut);font-size:12px}
-.rank tbody tr:first-child{background:#fff8ea}
-.hd{font-size:10px;background:#f3e8ff;color:#7a4fc4;padding:2px 8px;border-radius:999px;vertical-align:middle;font-weight:700}
-.stale{font-size:10px;background:var(--warn);color:#a15a10;padding:2px 8px;border-radius:999px;vertical-align:middle;font-weight:700}
-.method{font-size:10px;padding:2px 8px;border-radius:999px;white-space:nowrap;font-weight:700}
-.method1{background:#e3f6ec;color:#1f7a52}
-.method2{background:var(--warn);color:#a15a10}
+.rank tbody tr:first-child{background:#f0f3fd}
+.hd{font-size:10px;background:#eef1fc;color:var(--accent-dk);padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
+.stale{font-size:10px;background:var(--warn);color:#8a5c14;padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
+.method{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;font-weight:700}
+.method1{background:#e6f5ee;color:#0f6b46}
+.method2{background:var(--warn);color:#8a5c14}
 .up{color:var(--up);font-weight:800}
 .down{color:var(--down);font-weight:800}
-.rate{font-size:15px;margin:0 0 12px}
-.trend{font-size:13px}
-.trend th{width:5.5em;text-align:left;font-weight:600;color:var(--mut);padding:4px 0}
-.trend td.bar{width:auto;padding:4px 8px}
-.trend td.bar span{display:block;height:14px;background:linear-gradient(90deg,#ff9fb6,var(--accent));border-radius:999px}
-.trend td.barval{width:8em;text-align:right;white-space:nowrap;font-weight:600}
+.rate{font-size:15px;margin:0 0 12px;font-weight:600}
+
+/* ---- SVGチャート（データはPythonが計算し、JSは使わない） ---- */
+.chart-wrap{margin:14px 0 6px}
+.linechart{width:100%;height:auto;display:block}
+.linechart .grid-line{stroke:var(--line);stroke-width:1}
+.linechart .chart-area{fill:url(#lc-fill)}
+.linechart .chart-line{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.linechart .chart-dot{fill:var(--card);stroke:var(--accent);stroke-width:2.5}
+.linechart .chart-x{fill:var(--mut);font-size:11px;text-anchor:middle}
+.linechart .chart-val{fill:var(--fg);font-size:11.5px;font-weight:700;text-anchor:middle}
+.donuts{display:flex;flex-wrap:wrap;gap:28px;margin:16px 0 8px}
+.donut-item{text-align:center;width:104px}
+.donut-item .donut-label{font-size:11.5px;color:var(--mut);margin-top:6px;line-height:1.4}
+.donut-item .donut-method{display:block;font-size:10px;margin-top:2px}
+.donut-track{stroke:#e9ebf1;fill:none}
+.donut-value{stroke:var(--accent);fill:none;stroke-linecap:round}
+.donut-value.down{stroke:var(--down)}
+.donut-center{font-size:17px;font-weight:800;fill:var(--fg);text-anchor:middle;dominant-baseline:central}
+.donut-na{font-size:11px;fill:var(--mut);text-anchor:middle;dominant-baseline:central}
+
 .cols{display:flex;gap:32px;flex-wrap:wrap}
 .col{flex:1 1 320px;min-width:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin:26px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:6px 18px 16px;box-shadow:var(--shadow);transition:transform .15s ease,box-shadow .15s ease}
-.card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(255,111,145,.14),0 2px 6px rgba(58,46,53,.06)}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:26px 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:6px 18px 16px;box-shadow:var(--shadow);transition:border-color .15s ease,box-shadow .15s ease}
+.card:hover{border-color:#c7cff0;box-shadow:0 2px 4px rgba(18,20,31,.05),0 12px 28px rgba(18,20,31,.09)}
 .card h2{font-size:16px;border:0;margin:16px 0 8px;padding:0}
 .complist{list-style:none;margin:0;padding:0;font-size:14px}
 .complist li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dotted var(--line)}
 .complist li:last-child{border-bottom:none}
-.sal{color:var(--mut);font-size:12px;white-space:nowrap}
-.cta{display:inline-block;margin-top:12px;font-weight:700;font-size:14px;background:var(--accent);color:#fff!important;padding:9px 18px;border-radius:999px;text-decoration:none;box-shadow:0 3px 10px rgba(255,111,145,.35)}
+.sal{color:var(--mut);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.cta{display:inline-block;margin-top:12px;font-weight:700;font-size:14px;background:var(--fg);color:#fff!important;padding:10px 20px;border-radius:6px;text-decoration:none}
 .cta:hover{background:var(--accent-dk)}
 .peers .small a{margin-right:10px;white-space:nowrap}
-.source{margin-top:48px;font-size:13px;color:var(--mut);background:#fbf5f0;border-radius:var(--radius-sm);padding:16px 18px}
+.source{margin-top:48px;font-size:13px;color:var(--mut);background:#f7f8fb;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px}
 .source ul{padding-left:1.2em}
-.source h2{font-size:15px;border-bottom-width:2px}
-.notes ul{font-size:13px;color:#5a4a52}
-footer.site{border-top:1px solid var(--line);padding:24px 20px;font-size:12px;color:var(--mut);background:#fff8f3}
-footer.site>p{max-width:920px;margin:6px auto}
-.disclaimer{font-weight:700;color:#7a4fc4}
-@media(max-width:600px){h1{font-size:22px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}}
+.source h2{font-size:15px;border-bottom-width:1px}
+.notes ul{font-size:13px;color:#3d4453}
+footer.site{border-top:1px solid var(--line);padding:24px 20px;font-size:12px;color:var(--mut);background:var(--card)}
+footer.site>p{max-width:960px;margin:6px auto}
+.disclaimer{font-weight:700;color:var(--fg)}
+@media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}}
 """
 
 
