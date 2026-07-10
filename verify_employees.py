@@ -48,6 +48,8 @@ EXT_EXCLUDE_RE = re.compile(r"Provision|Loans|Receivable|Payable|Award|Bonus|Lia
 # 括弧内（臨時従業員など）を除いた整数トークン
 INT_TOKEN_RE = re.compile(r"(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d{2,7})(?![\d,.])")
 BRACKETED_RE = re.compile(r"[\[\［(（][^\]\］)）]*[\]\］)）]")
+# 各ページ末尾のEDINET定型フッター。「92/180」のページ番号を従業員数と誤検出しないよう除去する。
+_FOOTER_RE = re.compile(r"EDINET提出書類\n.*?\n有価証券報告書\n\s*\d+/\d+\n?", re.S)
 
 
 def xbrl_rows(doc_id: str) -> list[list[str]]:
@@ -172,13 +174,28 @@ def pdf_table_employees(pdf: Path, salary: int) -> tuple[int | None, str]:
     日付は「従業員数」見出しより前にあるので切り出し範囲に入らない。
     年号らしき整数を除外してはならない——1,981人（三井不動産）や
     2,021人（住友不動産）が消える。
+
+    表が改ページをまたぐことがある（野村不動産HD：見出し「②提出会社の状況」と
+    列見出しがページ末尾、427人などの数値が次ページ先頭）。ページ単体のテキスト
+    だけで検索すると見出しが見つからず取りこぼす。前ページ末尾を連結してから
+    検索することで対応する——「従業員数」という見出し文字列そのものを rfind で
+    探す設計なので、prev_tail に日付など無関係な文字列が混ざっていても、
+    見つかる見出しは変わらず、その後（=数値の並び）だけを見る限り安全。
+
+    ただし各ページ末尾にはEDINETの定型フッター「EDINET提出書類／会社名／
+    有価証券報告書／92/180」が付き、prev_tailに混ざると「92」をページ番号ごと
+    従業員数として誤検出する（野村不動産HDで実際に起きた）。フッターを除去
+    してから連結する。
     """
     yen = f"{salary:,}"
     thousand_yen = f"{salary // 1000:,}"  # 有報が「平均年間給与（千円）」で表記する場合
     doc = fitz.open(pdf)
     for needle in (yen, thousand_yen):
+        prev_tail = ""
         for page in doc:
-            text = page.get_text()
+            page_text = _FOOTER_RE.sub("", page.get_text())
+            text = prev_tail + page_text
+            prev_tail = page_text[-300:]
             start = 0
             while (pos := text.find(needle, start)) >= 0:
                 start = pos + 1
@@ -218,6 +235,12 @@ PURE_INT = re.compile(r"^\d{1,3}(?:,\d{3})*$|^\d{2,7}$")
 ROW_TOL = 8.0
 MAX_EMPLOYEES = 1_000_000
 
+# SUBARUの「合計 17,948　(6,411)」のように、臨時従業員数の括弧書きが全角スペース
+# 区切りで本数の直後にくっつき、PyMuPDFのwordsが1語として拾ってしまう
+# （半角スペースなら別語に割れるが、全角スペース　は語の区切りと認識されない）。
+# 括弧以降を切り落としてから整数判定する。
+_TRAILING_PAREN_RE = re.compile(r"[\s　]*[（(].*$")
+
 
 def _cx(r) -> float:
     return (r[0] + r[2]) / 2
@@ -237,7 +260,7 @@ def _ints_in_row(words, y: float, x_min: float, exclude: int | None) -> list[tup
     for w in words:
         if abs(_cy(w) - y) >= ROW_TOL or _cx(w) <= x_min:
             continue
-        t = w[4].strip()
+        t = _TRAILING_PAREN_RE.sub("", w[4].strip())
         if not PURE_INT.match(t):
             continue
         v = int(t.replace(",", ""))
