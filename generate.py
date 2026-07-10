@@ -86,6 +86,16 @@ SLUG = {
     "E04498": "tepco", "E04499": "kansai-electric", "E04502": "chubu-electric",
     "E02126": "mitsubishi-heavy", "E01532": "komatsu", "E01570": "daikin",
     "E01630": "terumo", "E02272": "olympus", "E02271": "nikon", "E02274": "canon",
+    "E01122": "agc", "E01130": "taiheiyo-cement", "E01138": "toto",
+    "E00023": "sumitomo-metal-mining", "E00021": "mitsubishi-materials", "E00028": "dowa-holdings",
+    "E01086": "bridgestone", "E01085": "yokohama-rubber", "E01090": "toyo-tire",
+    "E00642": "oji-holdings", "E11873": "nippon-paper", "E00659": "rengo",
+    "E24050": "eneos-holdings", "E01084": "idemitsu-kosan", "E31632": "cosmo-energy-holdings",
+    "E02367": "nintendo", "E02481": "bandai-namco-holdings", "E00693": "dai-nippon-printing",
+    "E04514": "tokyo-gas", "E04520": "osaka-gas", "E04517": "toho-gas",
+    "E04707": "oriental-land", "E07801": "recruit-holdings", "E05425": "m3",
+    "E05346": "tokyo-century", "E04762": "orix", "E03041": "credit-saison",
+    "E05080": "rakuten-group", "E05000": "line-yahoo",
 }
 GROUP_SLUG = {
     "総合商社": "sogo-shosha", "電気機器": "denki-kiki", "輸送用機器": "yusoyo-kiki",
@@ -94,6 +104,9 @@ GROUP_SLUG = {
     "建設業": "kensetsu", "鉄鋼": "tekko", "陸運": "rikuun", "空運": "kuuun",
     "小売": "kouri", "証券": "shoken", "電力": "denryoku", "機械": "kikai",
     "精密機器": "seimitsu-kiki",
+    "ガラス・土石": "glass-ceramics", "非鉄金属": "hitetsu-kinzoku", "ゴム製品": "gomu-seihin",
+    "パルプ・紙": "pulp-kami", "石油・石炭": "sekiyu-sekitan", "その他製品": "sonota-seihin",
+    "ガス業": "gas-gyo", "サービス業": "service-gyo", "その他金融": "sonota-kinyu",
 }
 
 NA = '<span class="na">非公表</span>'
