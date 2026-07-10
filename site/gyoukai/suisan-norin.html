@@ -10,8 +10,9 @@
 <meta property="og:description" content="極洋・ニッスイ・Ｕｍｉｏｓの平均年間給与・平均勤続年数・女性管理職比率・男女の賃金の差異・男性育休取得率を、有価証券報告書だけを出典に1つの表で比較。給与の推移と増減率つき。">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="../style.css">
+<script src="../app.js" defer></script>
 </head>
-<body>
+<body data-base="../">
 <header class="site">
   <a class="brand" href="../index.html">
     <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
@@ -22,6 +23,11 @@
     <span class="brand-word">Shukatsu.com</span>
   </a>
   <span class="tagline">有価証券報告書の数字だけで、同業他社を並べる</span>
+  <nav class="header-nav"><a href="../hikaku.html">企業を選んで比較する →</a></nav>
+  <div class="site-search" data-pos="header">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
 </header>
 <main>
 
@@ -32,7 +38,24 @@
 広告主の都合が入らないよう、掲載企業に費用は請求していません。並び順は平均年間給与の高い順です。</p>
 
 <section>
-<h2>基本データ（提出会社）</h2>
+<h2>平均年間給与</h2>
+<div class="hbars"><div class="hbar-row"><span class="hbar-name" title="極洋"><a href="../kigyou/kyokuyo.html">極洋</a></span><span class="hbar-track"><span class="hbar-fill" style="width:100.0%"></span></span><span class="hbar-val">約927万円</span></div><div class="hbar-row"><span class="hbar-name" title="ニッスイ"><a href="../kigyou/nissui.html">ニッスイ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:91.8%"></span></span><span class="hbar-val">約851万円</span></div><div class="hbar-row"><span class="hbar-name" title="Ｕｍｉｏｓ"><a href="../kigyou/umios.html">Ｕｍｉｏｓ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:84.5%"></span></span><span class="hbar-val">約783万円</span></div></div>
+<p class="caveat">平均年間給与は<b>提出会社（単体）の従業員が分母</b>です。連結従業員数ではありません。有報が定める記載事項で、賞与・基準外賃金を含み、退職金は含みません。</p>
+</section>
+
+<section>
+<h2>女性管理職比率</h2>
+<div class="hbars"><div class="hbar-row"><span class="hbar-name" title="Ｕｍｉｏｓ"><a href="../kigyou/umios.html">Ｕｍｉｏｓ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:10.0%"></span></span><span class="hbar-val">10.0%</span></div><div class="hbar-row"><span class="hbar-name" title="ニッスイ"><a href="../kigyou/nissui.html">ニッスイ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:9.1%"></span></span><span class="hbar-val">9.1%</span></div><div class="hbar-row"><span class="hbar-name" title="極洋"><a href="../kigyou/kyokuyo.html">極洋</a></span><span class="hbar-track"><span class="hbar-fill" style="width:3.8%"></span></span><span class="hbar-val">3.8%</span></div></div>
+</section>
+
+<section>
+<h2>男女の賃金の差異（全労働者）</h2>
+<div class="hbars"><div class="hbar-row"><span class="hbar-name" title="Ｕｍｉｏｓ"><a href="../kigyou/umios.html">Ｕｍｉｏｓ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:63.0%"></span></span><span class="hbar-val">63.0%</span></div><div class="hbar-row"><span class="hbar-name" title="ニッスイ"><a href="../kigyou/nissui.html">ニッスイ</a></span><span class="hbar-track"><span class="hbar-fill" style="width:59.3%"></span></span><span class="hbar-val">59.3%</span></div><div class="hbar-row"><span class="hbar-name" title="極洋"><a href="../kigyou/kyokuyo.html">極洋</a></span><span class="hbar-track"><span class="hbar-fill" style="width:53.7%"></span></span><span class="hbar-val">53.7%</span></div></div>
+<p class="caveat">「男女の賃金の差異」は<b>男性の賃金を100としたときの女性の賃金の割合</b>です。64.7%なら「女性は男性の64.7%」の意味で、数値が小さいほど差が大きいことを表します。職階や勤続年数の構成差を含んだ値であり、同一労働に対する賃金差ではありません。</p>
+</section>
+
+<section>
+<h2>詳細データ（提出会社）</h2>
 <div class="scroll"><table class="grid rank">
 <thead><tr><th>会社</th><th>決算期</th><th>平均年間給与</th><th>平均年齢</th><th>平均勤続年数</th><th>従業員数(単体)</th><th>従業員数(連結)</th><th>女性管理職比率</th><th>男女の賃金の差異</th></tr></thead>
 <tbody><tr><th scope="row"><a href="../kigyou/kyokuyo.html">極洋</a></th><td>2026-03期</td><td>約927万円</td><td>41.6歳</td><td>16.5年</td><td>769人</td><td>2,542人</td><td>3.8%</td><td>53.7%</td></tr><tr><th scope="row"><a href="../kigyou/nissui.html">ニッスイ</a></th><td>2026-03期</td><td>約851万円</td><td>42.8歳</td><td>15.8年</td><td>1,489人</td><td>11,526人</td><td>9.1%</td><td>59.3%</td></tr><tr><th scope="row"><a href="../kigyou/umios.html">Ｕｍｉｏｓ</a></th><td>2026-03期</td><td>約783万円</td><td>41.0歳</td><td>14.4年</td><td>1,738人</td><td>12,479人</td><td>10.0%</td><td>63.0%</td></tr></tbody></table></div>
@@ -67,6 +90,11 @@
 
 </main>
 <footer class="site">
+  <p class="footer-search-label">企業を探す</p>
+  <div class="site-search" data-pos="footer">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
   <p class="disclaimer">本サイトの数値は公的な一次情報から機械的に抽出したものですが、正確性を保証するものではありません。最終的な判断は必ず原典（有価証券報告書・各社の公式発表）をご確認ください。</p>
   <p class="license">
     出典：EDINET閲覧（提出）サイト（各ページに当該書類のURLを記載）／

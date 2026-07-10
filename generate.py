@@ -222,6 +222,13 @@ def order_in_csv() -> dict[str, int]:
 
 # ---------------------------------------------------------------- 部品
 
+def search_box(pos: str) -> str:
+    return f"""<div class="site-search" data-pos="{pos}">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>"""
+
+
 def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     up = "../" * depth
     return f"""<!DOCTYPE html>
@@ -236,8 +243,9 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
 <meta property="og:description" content="{e(desc)}">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="{up}style.css">
+<script src="{up}app.js" defer></script>
 </head>
-<body>
+<body data-base="{up}">
 <header class="site">
   <a class="brand" href="{up}index.html">
     <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
@@ -248,11 +256,15 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
   <span class="tagline">{e(TAGLINE)}</span>
+  <nav class="header-nav"><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
+  {search_box("header")}
 </header>
 <main>
 {body}
 </main>
 <footer class="site">
+  <p class="footer-search-label">企業を探す</p>
+  {search_box("footer")}
   <p class="disclaimer">{e(DISCLAIMER)}</p>
   <p class="license">
     出典：EDINET閲覧（提出）サイト（各ページに当該書類のURLを記載）／
@@ -453,6 +465,39 @@ def donut(pct_value: float | None, size: int = 96, stroke: int = 11, method: str
         f"{track}{arc}"
         f'<text class="donut-center" x="{cx}" y="{cy}">{label}</text></svg>'
     )
+
+
+def hbars(rows: list[tuple[str, str, float | None]], fmt, scale: str = "group") -> str:
+    """横棒グラフ。(会社名, リンク先href, 値) の並びをCSSの幅%だけで描く。
+
+    SVGではなくCSS幅を使う理由：折れ線グラフでラベルがviewBox外にはみ出て欠ける不具合を
+    実ブラウザで踏んだため。横棒はテキストが通常のHTMLノードなら原理的にクリップされない。
+    scale="group": その並びの最大値を100%とする（給与など0-100%に自然な上限が無い指標向け）。
+    scale="pct100": 値そのもの（0.0-1.0の比率）を0-100%として使う（女性管理職比率など）。
+    """
+    vals = [v for _, _, v in rows if v is not None]
+    if not vals:
+        return f"<p>{NA}</p>"
+    if scale == "pct100":
+        widths = [v * 100 if v is not None else None for _, _, v in rows]
+    else:
+        m = max(vals) or 1
+        widths = [v / m * 100 if v is not None else None for _, _, v in rows]
+    items = []
+    for (name, href, v), w in zip(rows, widths):
+        label = e(name) if not href else f'<a href="{e(href)}">{e(name)}</a>'
+        if v is None:
+            items.append(
+                f'<div class="hbar-row"><span class="hbar-name" title="{e(name)}">{label}</span>'
+                f'<span class="hbar-track"></span><span class="hbar-val na">{NA}</span></div>'
+            )
+        else:
+            items.append(
+                f'<div class="hbar-row"><span class="hbar-name" title="{e(name)}">{label}</span>'
+                f'<span class="hbar-track"><span class="hbar-fill" style="width:{max(w, 1.5):.1f}%"></span></span>'
+                f'<span class="hbar-val">{fmt(v)}</span></div>'
+            )
+    return f'<div class="hbars">{"".join(items)}</div>'
 
 
 def change_rate(series: dict) -> str:
@@ -774,6 +819,19 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
         for c in members
     )
 
+    def _rows(get):
+        rs = [(c["short"], f'../kigyou/{c["slug"]}.html', get(c)) for c in members]
+        rs.sort(key=lambda r: (r[2] is None, -(r[2] or 0)))
+        return rs
+
+    salary_chart = hbars(_rows(lambda c: c["latest"]["reporting_company"]["average_annual_salary_yen"]), man)
+    fmr_chart = hbars(
+        _rows(lambda c: c["latest"]["diversity"]["female_manager_ratio"]), pct, scale="pct100"
+    )
+    wage_chart = hbars(
+        _rows(lambda c: c["latest"]["diversity"]["female_to_male_wage_ratio_all"]), pct, scale="pct100"
+    )
+
     body = f"""
 <nav class="crumb"><a href="../index.html">トップ</a> › {e(group)}</nav>
 
@@ -782,7 +840,24 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 広告主の都合が入らないよう、掲載企業に費用は請求していません。並び順は平均年間給与の高い順です。</p>
 
 <section>
-<h2>基本データ（提出会社）</h2>
+<h2>平均年間給与</h2>
+{salary_chart}
+<p class="caveat">{SALARY_CAVEAT}</p>
+</section>
+
+<section>
+<h2>女性管理職比率</h2>
+{fmr_chart}
+</section>
+
+<section>
+<h2>男女の賃金の差異（全労働者）</h2>
+{wage_chart}
+<p class="caveat">{WAGE_CAVEAT}</p>
+</section>
+
+<section>
+<h2>詳細データ（提出会社）</h2>
 {main_table}
 <p class="caveat">{SALARY_CAVEAT}</p>
 <p class="caveat">{WAGE_CAVEAT}</p>
@@ -812,6 +887,56 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     title = f"{group}{len(members)}社の平均年収・男女の賃金の差異 横比較｜{SITE_NAME}"
     desc = f"{names}の平均年間給与・平均勤続年数・女性管理職比率・男女の賃金の差異・男性育休取得率を、有価証券報告書だけを出典に1つの表で比較。給与の推移と増減率つき。"
     return page(title, desc, body, depth=1, canonical=f"/gyoukai/{GROUP_SLUG.get(group, group)}.html")
+
+
+# ---------------------------------------------------------------- 企業を選んで比較
+
+def hikaku_page(companies: list[dict], groups: dict[str, list[dict]], fetched: str) -> str:
+    """業界をまたいで任意の企業を選び横比較する。全社ぶんの数値をここに埋め込むのではなく、
+    /data/companies.json をクライアント側JSが読んで描く（app.js）。理由は2つ：
+    ①静的HTMLだけでは「どの組み合わせを選ぶか」が事前に分からず生成しようがない
+    ②companies.jsonはすでにLayer2用に生成済みで、二重管理を避けられる。
+    チェックボックスの一覧はここで機械的に埋め込み、業界ごとに<details>で折りたたむ。
+    """
+    group_blocks = []
+    for g, members in groups.items():
+        opts = "".join(
+            f'<label><input type="checkbox" data-slug="{e(c["slug"])}"> {e(c["short"])}</label>'
+            for c in sorted(members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True))
+        )
+        group_blocks.append(f"""<details>
+<summary>{e(g)}（{len(members)}社）</summary>
+<div class="compare-checklist">{opts}</div>
+</details>""")
+
+    body = f"""
+<nav class="crumb"><a href="index.html">トップ</a> › 企業を選んで比較する</nav>
+
+<h1>企業を選んで比較する</h1>
+<p class="lead">業界の枠にとらわれず、気になる企業だけを選んで並べられます。
+チェックすると平均年間給与・女性管理職比率・男女の賃金の差異をグラフで比較します。
+選んだ組み合わせはURLに残るので、そのままブックマークや共有ができます。</p>
+
+<div id="compare-app">
+<div class="compare-toolbar">
+  <span id="compare-count" class="compare-count">0社選択中</span>
+  <button type="button" id="compare-clear">選択をクリア</button>
+</div>
+<div class="compare-groups">{"".join(group_blocks)}</div>
+<div id="compare-result"><p class="lead">上のリストから企業を選ぶと、ここに横比較が表示されます。</p></div>
+</div>
+
+<noscript><p class="warn">このページはJavaScriptを使います。個別の企業比較は各<a href="index.html">業界ページ</a>をご覧ください。</p></noscript>
+
+<section class="source">
+<h2>出典</h2>
+<p>各企業の出典・取得日は<a href="index.html">個別の企業ページ</a>に記載しています。当サイトのデータ取得日 {e(fetched)}</p>
+<p class="processing">{e(PROCESSING_NOTICE)}</p>
+</section>
+"""
+    title = f"企業を選んで比較する｜{SITE_NAME}"
+    desc = f"業界の枠を超えて、気になる{len(companies)}社の中から自由に企業を選び、平均年間給与・女性管理職比率・男女の賃金の差異を横比較できます。"
+    return page(title, desc, body, depth=0, canonical="/hikaku.html")
 
 
 # ---------------------------------------------------------------- トップ
@@ -889,6 +1014,23 @@ header.site>*{max-width:960px;margin:0 auto;padding:0 20px}
 .brand svg{flex:none}
 .brand-word{font-weight:800;font-size:26px;color:#fff;letter-spacing:-.02em}
 .tagline{display:block;color:#9aa4d9;font-size:13px;padding:4px 0 22px;margin-left:38px}
+.header-nav{margin-left:38px;padding-bottom:14px}
+.header-nav a{color:#c2caf1;font-size:13px;font-weight:700;text-decoration:none}
+.header-nav a:hover{color:#fff}
+header.site .site-search{margin-left:38px;padding-bottom:20px;max-width:360px}
+header.site .search-input{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:7px;padding:8px 12px;font-size:13.5px}
+header.site .search-input::placeholder{color:#aab0d6}
+header.site .search-input:focus{outline:2px solid rgba(255,255,255,.5);outline-offset:1px}
+.site-search{position:relative}
+.footer-search-label{font-weight:700;color:var(--fg);margin:0 0 8px;font-size:13px}
+footer.site .site-search{max-width:420px;margin:0 0 22px}
+footer.site .search-input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--fg);border-radius:7px;padding:9px 12px;font-size:14px}
+.search-results{position:absolute;left:0;right:0;top:100%;margin-top:4px;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);max-height:280px;overflow-y:auto;z-index:20}
+.search-results a{display:flex;justify-content:space-between;gap:10px;padding:9px 12px;color:var(--fg);text-decoration:none;font-size:13.5px;border-bottom:1px solid var(--line)}
+.search-results a:last-child{border-bottom:none}
+.search-results a:hover,.search-results a.active{background:#eef1fc}
+.search-results .sr-group{color:var(--mut);font-size:11.5px;white-space:nowrap}
+.search-results .sr-empty{padding:10px 12px;color:var(--mut);font-size:13px}
 a{color:var(--link);text-decoration-color:rgba(58,82,201,.35);text-underline-offset:2px}
 a:hover{text-decoration-color:var(--link)}
 h1{font-size:26px;line-height:1.5;margin:28px 0 14px;font-weight:800;letter-spacing:-.01em}
@@ -946,6 +1088,17 @@ table{border-collapse:collapse;width:100%}
 .donut-center{font-size:17px;font-weight:800;fill:var(--fg);text-anchor:middle;dominant-baseline:central}
 .donut-na{font-size:11px;fill:var(--mut);text-anchor:middle;dominant-baseline:central}
 
+.hbars{margin:14px 0 6px}
+.hbar-row{display:grid;grid-template-columns:minmax(7em,13em) 1fr 5.5em;align-items:center;gap:12px;padding:7px 0}
+.hbar-row+.hbar-row{border-top:1px solid var(--line)}
+.hbar-name{font-size:13.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hbar-name a{color:var(--fg);text-decoration:none}
+.hbar-name a:hover{color:var(--link)}
+.hbar-track{background:#eef0f6;border-radius:5px;height:14px;overflow:hidden}
+.hbar-fill{display:block;background:linear-gradient(90deg,var(--accent-dk),var(--accent));height:100%;border-radius:5px}
+.hbar-val{font-size:12.5px;color:var(--fg);font-weight:700;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.hbar-val.na{color:var(--mut);font-weight:400}
+
 .cols{display:flex;gap:32px;flex-wrap:wrap}
 .col{flex:1 1 320px;min-width:0}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:26px 0}
@@ -966,11 +1119,240 @@ table{border-collapse:collapse;width:100%}
 footer.site{border-top:1px solid var(--line);padding:24px 20px;font-size:12px;color:var(--mut);background:var(--card)}
 footer.site>p{max-width:960px;margin:6px auto}
 .disclaimer{font-weight:700;color:var(--fg)}
-@media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}}
+
+.compare-toolbar{display:flex;align-items:center;gap:14px;margin:18px 0;padding:12px 16px;background:var(--note);border:1px solid #d7ddf7;border-radius:var(--radius-sm)}
+.compare-toolbar button{font:inherit;font-weight:700;font-size:13.5px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--card);cursor:pointer}
+.compare-toolbar button:hover{border-color:#c7cff0}
+.compare-count{font-size:13px;color:var(--mut)}
+.compare-groups{margin:8px 0 20px}
+.compare-groups details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden}
+.compare-groups summary{padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}
+.compare-groups summary::-webkit-details-marker{display:none}
+.compare-groups summary:after{content:"+";float:right;color:var(--mut);font-weight:400}
+.compare-groups details[open] summary:after{content:"−"}
+.compare-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
+.compare-checklist label{display:flex;align-items:center;gap:7px;font-size:13.5px;padding:5px 0;cursor:pointer}
+#compare-result{margin-top:8px}
+@media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
 """
 
 
-# ---------------------------------------------------------------- 書き出し
+APP_JS = r"""(function () {
+  "use strict";
+  var base = document.body.getAttribute("data-base") || "";
+  var dataPromise = null;
+
+  function loadData() {
+    if (!dataPromise) {
+      dataPromise = fetch(base + "data/companies.json").then(function (r) { return r.json(); });
+    }
+    return dataPromise;
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function manYen(v) {
+    return typeof v === "number" ? "約" + Math.round(v / 10000).toLocaleString() + "万円" : "非公表";
+  }
+  function pct1(v) {
+    return typeof v === "number" ? (v * 100).toFixed(1) + "%" : "非公表";
+  }
+  function num0(v, unit) {
+    return typeof v === "number" ? v.toLocaleString() + (unit || "") : "非公表";
+  }
+
+  // ---- 検索窓（ヘッダー・フッター共通） ----
+  function initSearch() {
+    var widgets = document.querySelectorAll(".site-search");
+    if (!widgets.length) return;
+    loadData().then(function (data) {
+      widgets.forEach(function (w) { wireWidget(w, data.companies); });
+    });
+  }
+
+  function wireWidget(widget, companies) {
+    var input = widget.querySelector(".search-input");
+    var results = widget.querySelector(".search-results");
+    var activeIndex = -1;
+
+    function render(matches) {
+      if (!matches.length) {
+        results.innerHTML = '<div class="sr-empty">一致する企業がありません</div>';
+        results.hidden = false;
+        return;
+      }
+      results.innerHTML = matches.map(function (c) {
+        return '<a href="' + base + "kigyou/" + c.slug + '.html"><span>' + esc(c.name) +
+          '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
+      }).join("");
+      results.hidden = false;
+      activeIndex = -1;
+    }
+
+    function search(q) {
+      q = q.trim().toLowerCase();
+      if (!q) { results.hidden = true; results.innerHTML = ""; return; }
+      var matches = companies.filter(function (c) {
+        return c.name.toLowerCase().indexOf(q) !== -1 ||
+          c.slug.toLowerCase().indexOf(q) !== -1 ||
+          c.group.toLowerCase().indexOf(q) !== -1;
+      }).slice(0, 8);
+      render(matches);
+    }
+
+    input.addEventListener("input", function () { search(input.value); });
+    input.addEventListener("keydown", function (ev) {
+      var items = results.querySelectorAll("a");
+      if (ev.key === "ArrowDown" && items.length) {
+        ev.preventDefault();
+        activeIndex = Math.min(activeIndex + 1, items.length - 1);
+        items.forEach(function (a, i) { a.classList.toggle("active", i === activeIndex); });
+        items[activeIndex].scrollIntoView({ block: "nearest" });
+      } else if (ev.key === "ArrowUp" && items.length) {
+        ev.preventDefault();
+        activeIndex = Math.max(activeIndex - 1, 0);
+        items.forEach(function (a, i) { a.classList.toggle("active", i === activeIndex); });
+      } else if (ev.key === "Enter") {
+        if (activeIndex >= 0 && items[activeIndex]) {
+          window.location.href = items[activeIndex].href;
+        } else if (items.length) {
+          window.location.href = items[0].href;
+        }
+      } else if (ev.key === "Escape") {
+        results.hidden = true;
+        input.blur();
+      }
+    });
+    input.addEventListener("blur", function () {
+      setTimeout(function () { results.hidden = true; }, 150);
+    });
+    input.addEventListener("focus", function () {
+      if (input.value.trim()) search(input.value);
+    });
+  }
+
+  // ---- 企業を選んで比較するページ ----
+  function initCompare() {
+    var root = document.getElementById("compare-app");
+    if (!root) return;
+    var resultEl = document.getElementById("compare-result");
+    var countEl = document.getElementById("compare-count");
+    var clearBtn = document.getElementById("compare-clear");
+    var checkboxes = root.querySelectorAll('input[type="checkbox"][data-slug]');
+
+    loadData().then(function (data) {
+      var bySlug = {};
+      data.companies.forEach(function (c) { bySlug[c.slug] = c; });
+
+      function selectedSlugs() {
+        return Array.prototype.slice.call(checkboxes)
+          .filter(function (cb) { return cb.checked; })
+          .map(function (cb) { return cb.dataset.slug; });
+      }
+
+      function hbar(rows, fmt, scalePct) {
+        var vals = rows.map(function (r) { return r[2]; }).filter(function (v) { return v !== null && v !== undefined; });
+        if (!vals.length) return '<p><span class="na">非公表</span></p>';
+        var max = Math.max.apply(null, vals) || 1;
+        var sorted = rows.slice().sort(function (a, b) {
+          var av = a[2], bv = b[2];
+          if (av === null || av === undefined) return 1;
+          if (bv === null || bv === undefined) return -1;
+          return bv - av;
+        });
+        var html = '<div class="hbars">';
+        sorted.forEach(function (r) {
+          var name = r[0], href = r[1], v = r[2];
+          if (v === null || v === undefined) {
+            html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
+              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '<span class="hbar-track"></span><span class="hbar-val na">非公表</span></div>';
+          } else {
+            var w = scalePct ? v * 100 : (v / max * 100);
+            html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
+              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '<span class="hbar-track"><span class="hbar-fill" style="width:' + Math.max(w, 1.5).toFixed(1) + '%"></span></span>' +
+              '<span class="hbar-val">' + fmt(v) + "</span></div>";
+          }
+        });
+        html += "</div>";
+        return html;
+      }
+
+      function render() {
+        var slugs = selectedSlugs();
+        if (countEl) countEl.textContent = slugs.length + "社選択中";
+
+        var url = new URL(window.location.href);
+        if (slugs.length) { url.searchParams.set("c", slugs.join(",")); } else { url.searchParams.delete("c"); }
+        window.history.replaceState(null, "", url.pathname + url.search);
+
+        if (!slugs.length) {
+          resultEl.innerHTML = '<p class="lead">上のリストから企業を選ぶと、ここに横比較が表示されます。</p>';
+          return;
+        }
+        var picked = slugs.map(function (s) { return bySlug[s]; }).filter(Boolean);
+        var rowsFor = function (key) {
+          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key]]; });
+        };
+        var tableRows = picked.map(function (c) {
+          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + esc(c.name) + "</a></th>" +
+            "<td>" + esc((c.period || "").slice(0, 7)) + "期</td>" +
+            "<td>" + manYen(c.salary) + "</td>" +
+            "<td>" + (typeof c.age === "number" ? c.age.toFixed(1) + "歳" : "非公表") + "</td>" +
+            "<td>" + (typeof c.tenure === "number" ? c.tenure.toFixed(1) + "年" : "非公表") + "</td>" +
+            "<td>" + num0(c.employees_single, "人") + "</td>" +
+            "<td>" + num0(c.employees_consolidated, "人") + "</td>" +
+            "<td>" + pct1(c.female_manager_ratio) + "</td>" +
+            "<td>" + pct1(c.wage_ratio_all) + "</td></tr>";
+        }).join("");
+
+        resultEl.innerHTML =
+          "<section><h2>平均年間給与</h2>" + hbar(rowsFor("salary"), manYen, false) + "</section>" +
+          "<section><h2>女性管理職比率</h2>" + hbar(rowsFor("female_manager_ratio"), pct1, true) + "</section>" +
+          "<section><h2>男女の賃金の差異（全労働者）</h2>" + hbar(rowsFor("wage_ratio_all"), pct1, true) + "</section>" +
+          '<section><h2>詳細データ</h2><div class="scroll"><table class="grid rank"><thead><tr>' +
+          "<th>会社</th><th>決算期</th><th>平均年間給与</th><th>平均年齢</th><th>平均勤続年数</th>" +
+          "<th>従業員数(単体)</th><th>従業員数(連結)</th><th>女性管理職比率</th><th>男女の賃金の差異</th>" +
+          "</tr></thead><tbody>" + tableRows + "</tbody></table></div></section>";
+      }
+
+      checkboxes.forEach(function (cb) { cb.addEventListener("change", render); });
+      if (clearBtn) {
+        clearBtn.addEventListener("click", function () {
+          checkboxes.forEach(function (cb) { cb.checked = false; });
+          render();
+        });
+      }
+
+      var params = new URLSearchParams(window.location.search);
+      var pre = params.get("c");
+      if (pre) {
+        var want = {};
+        pre.split(",").forEach(function (s) { want[s] = true; });
+        checkboxes.forEach(function (cb) {
+          if (want[cb.dataset.slug]) {
+            cb.checked = true;
+            var det = cb.closest("details");
+            if (det) det.open = true;
+          }
+        });
+      }
+      render();
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initSearch();
+    initCompare();
+  });
+})();
+"""
+
 
 def main() -> None:
     companies, fetched = load()
@@ -991,9 +1373,11 @@ def main() -> None:
     (SITE / "data").mkdir(parents=True)
 
     (SITE / "style.css").write_text(CSS, encoding="utf-8")
+    (SITE / "app.js").write_text(APP_JS, encoding="utf-8")
     (SITE / "index.html").write_text(index_page(companies, groups, fetched), encoding="utf-8")
+    (SITE / "hikaku.html").write_text(hikaku_page(companies, groups, fetched), encoding="utf-8")
 
-    urls = ["/index.html"]
+    urls = ["/index.html", "/hikaku.html"]
     for g, members in groups.items():
         path = f"/gyoukai/{GROUP_SLUG.get(g, g)}.html"
         (SITE / path.lstrip("/")).write_text(group_page(g, members, fetched), encoding="utf-8")

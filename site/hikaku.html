@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>企業を選んで比較する｜Shukatsu.com</title>
+<meta name="description" content="業界の枠を超えて、気になる154社の中から自由に企業を選び、平均年間給与・女性管理職比率・男女の賃金の差異を横比較できます。">
+<link rel="canonical" href="https://shukatsu-data.com/hikaku.html">
+<meta property="og:title" content="企業を選んで比較する｜Shukatsu.com">
+<meta property="og:description" content="業界の枠を超えて、気になる154社の中から自由に企業を選び、平均年間給与・女性管理職比率・男女の賃金の差異を横比較できます。">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="style.css">
+<script src="app.js" defer></script>
+</head>
+<body data-base="">
+<header class="site">
+  <a class="brand" href="index.html">
+    <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
+      <rect x="1" y="12" width="5" height="9" rx="1" fill="#fff"/>
+      <rect x="8.5" y="6" width="5" height="15" rx="1" fill="#fff" opacity=".78"/>
+      <rect x="16" y="1" width="5" height="20" rx="1" fill="#fff" opacity=".5"/>
+    </svg>
+    <span class="brand-word">Shukatsu.com</span>
+  </a>
+  <span class="tagline">有価証券報告書の数字だけで、同業他社を並べる</span>
+  <nav class="header-nav"><a href="hikaku.html">企業を選んで比較する →</a></nav>
+  <div class="site-search" data-pos="header">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
+</header>
+<main>
+
+<nav class="crumb"><a href="index.html">トップ</a> › 企業を選んで比較する</nav>
+
+<h1>企業を選んで比較する</h1>
+<p class="lead">業界の枠にとらわれず、気になる企業だけを選んで並べられます。
+チェックすると平均年間給与・女性管理職比率・男女の賃金の差異をグラフで比較します。
+選んだ組み合わせはURLに残るので、そのままブックマークや共有ができます。</p>
+
+<div id="compare-app">
+<div class="compare-toolbar">
+  <span id="compare-count" class="compare-count">0社選択中</span>
+  <button type="button" id="compare-clear">選択をクリア</button>
+</div>
+<div class="compare-groups"><details>
+<summary>総合商社（7社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mitsubishi-corporation"> 三菱商事</label><label><input type="checkbox" data-slug="mitsui-bussan"> 三井物産</label><label><input type="checkbox" data-slug="itochu"> 伊藤忠商事</label><label><input type="checkbox" data-slug="sumitomo-corporation"> 住友商事</label><label><input type="checkbox" data-slug="marubeni"> 丸紅</label><label><input type="checkbox" data-slug="toyota-tsusho"> 豊田通商</label><label><input type="checkbox" data-slug="sojitz"> 双日</label></div>
+</details><details>
+<summary>電気機器（10社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="keyence"> キーエンス</label><label><input type="checkbox" data-slug="sony-group"> ソニーグループ</label><label><input type="checkbox" data-slug="fujitsu"> 富士通</label><label><input type="checkbox" data-slug="hitachi"> 日立製作所</label><label><input type="checkbox" data-slug="panasonic-holdings"> パナソニックホールディングス</label><label><input type="checkbox" data-slug="tdk"> ＴＤＫ</label><label><input type="checkbox" data-slug="mitsubishi-electric"> 三菱電機</label><label><input type="checkbox" data-slug="canon"> キヤノン</label><label><input type="checkbox" data-slug="murata"> 村田製作所</label><label><input type="checkbox" data-slug="kyocera"> 京セラ</label></div>
+</details><details>
+<summary>輸送用機器（6社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="toyota"> トヨタ自動車</label><label><input type="checkbox" data-slug="honda"> 本田技研工業</label><label><input type="checkbox" data-slug="nissan"> 日産自動車</label><label><input type="checkbox" data-slug="suzuki"> スズキ</label><label><input type="checkbox" data-slug="subaru"> ＳＵＢＡＲＵ</label><label><input type="checkbox" data-slug="mazda"> マツダ</label></div>
+</details><details>
+<summary>銀行業（6社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="smtb-group"> 三井住友トラストグループ</label><label><input type="checkbox" data-slug="smfg"> 三井住友フィナンシャルグループ</label><label><input type="checkbox" data-slug="mufg"> 三菱ＵＦＪフィナンシャル・グループ</label><label><input type="checkbox" data-slug="mizuho-fg"> みずほフィナンシャルグループ</label><label><input type="checkbox" data-slug="resona-holdings"> りそなホールディングス</label><label><input type="checkbox" data-slug="chiba-bank"> 千葉銀行</label></div>
+</details><details>
+<summary>保険業（5社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="tokio-marine-hd"> 東京海上ホールディングス</label><label><input type="checkbox" data-slug="sompo-hd"> ＳＯＭＰＯホールディングス</label><label><input type="checkbox" data-slug="ms-and-ad"> ＭＳ＆ＡＤインシュアランスグループホールディングス</label><label><input type="checkbox" data-slug="dai-ichi-life-group"> 第一ライフグループ</label><label><input type="checkbox" data-slug="japan-post-insurance"> かんぽ生命保険</label></div>
+</details><details>
+<summary>情報・通信業（8社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="dena"> ディー・エヌ・エー</label><label><input type="checkbox" data-slug="ntt"> ＮＴＴ</label><label><input type="checkbox" data-slug="kddi"> ＫＤＤＩ</label><label><input type="checkbox" data-slug="cyberagent"> サイバーエージェント</label><label><input type="checkbox" data-slug="line-yahoo"> ＬＩＮＥヤフー</label><label><input type="checkbox" data-slug="softbank"> ソフトバンク</label><label><input type="checkbox" data-slug="rakuten-group"> 楽天グループ</label><label><input type="checkbox" data-slug="gmo-internet-group"> ＧＭＯインターネットグループ</label></div>
+</details><details>
+<summary>不動産業（5社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mitsui-fudosan"> 三井不動産</label><label><input type="checkbox" data-slug="mitsubishi-estate"> 三菱地所</label><label><input type="checkbox" data-slug="tokyu-fudosan-holdings"> 東急不動産ホールディングス</label><label><input type="checkbox" data-slug="nomura-real-estate-holdings"> 野村不動産ホールディングス</label><label><input type="checkbox" data-slug="sumitomo-realty"> 住友不動産</label></div>
+</details><details>
+<summary>海運（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mol"> 商船三井</label><label><input type="checkbox" data-slug="nippon-yusen"> 日本郵船</label><label><input type="checkbox" data-slug="kawasaki-kisen"> 川崎汽船</label></div>
+</details><details>
+<summary>医薬品（8社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="chugai"> 中外製薬</label><label><input type="checkbox" data-slug="takeda"> 武田薬品工業</label><label><input type="checkbox" data-slug="astellas"> アステラス製薬</label><label><input type="checkbox" data-slug="eisai"> エーザイ</label><label><input type="checkbox" data-slug="daiichi-sankyo"> 第一三共</label><label><input type="checkbox" data-slug="shionogi"> 塩野義製薬</label><label><input type="checkbox" data-slug="otsuka-holdings"> 大塚ホールディングス</label><label><input type="checkbox" data-slug="kyowa-kirin"> 協和キリン</label></div>
+</details><details>
+<summary>食料品（8社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="asahi-group"> アサヒグループホールディングス</label><label><input type="checkbox" data-slug="suntory-beverage-food"> サントリービバレッジ＆フード</label><label><input type="checkbox" data-slug="ajinomoto"> 味の素</label><label><input type="checkbox" data-slug="kirin"> キリンホールディングス</label><label><input type="checkbox" data-slug="meiji-holdings"> 明治ホールディングス</label><label><input type="checkbox" data-slug="nipponham"> 日本ハム</label><label><input type="checkbox" data-slug="nissin-foods"> 日清食品ホールディングス</label><label><input type="checkbox" data-slug="calbee"> カルビー</label></div>
+</details><details>
+<summary>化学（8社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mitsubishi-chemical"> 三菱ケミカルグループ</label><label><input type="checkbox" data-slug="fujifilm-holdings"> 富士フイルムホールディングス</label><label><input type="checkbox" data-slug="sumitomo-chemical"> 住友化学</label><label><input type="checkbox" data-slug="shinetsu-chemical"> 信越化学工業</label><label><input type="checkbox" data-slug="asahi-kasei"> 旭化成</label><label><input type="checkbox" data-slug="nitto-denko"> 日東電工</label><label><input type="checkbox" data-slug="toray"> 東レ</label><label><input type="checkbox" data-slug="kuraray"> クラレ</label></div>
+</details><details>
+<summary>建設業（5社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="kajima"> 鹿島建設</label><label><input type="checkbox" data-slug="obayashi"> 大林組</label><label><input type="checkbox" data-slug="taisei"> 大成建設</label><label><input type="checkbox" data-slug="shimizu"> 清水建設</label><label><input type="checkbox" data-slug="haseko"> 長谷工コーポレーション</label></div>
+</details><details>
+<summary>鉄鋼（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="jfe"> ＪＦＥホールディングス</label><label><input type="checkbox" data-slug="nippon-steel"> 日本製鉄</label><label><input type="checkbox" data-slug="kobe-steel"> 神戸製鋼所</label></div>
+</details><details>
+<summary>陸運（5社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="yamato-holdings"> ヤマトホールディングス</label><label><input type="checkbox" data-slug="jr-central"> 東海旅客鉄道</label><label><input type="checkbox" data-slug="jr-east"> 東日本旅客鉄道</label><label><input type="checkbox" data-slug="sg-holdings"> ＳＧホールディングス</label><label><input type="checkbox" data-slug="jr-west"> 西日本旅客鉄道</label></div>
+</details><details>
+<summary>空運（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="jal"> 日本航空</label><label><input type="checkbox" data-slug="ana"> ＡＮＡホールディングス</label><label><input type="checkbox" data-slug="skymark"> スカイマーク</label></div>
+</details><details>
+<summary>小売（7社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="fast-retailing"> ファーストリテイリング</label><label><input type="checkbox" data-slug="aeon"> イオン</label><label><input type="checkbox" data-slug="seven-and-i"> セブン＆アイ・ホールディングス</label><label><input type="checkbox" data-slug="takashimaya"> 髙島屋</label><label><input type="checkbox" data-slug="nitori-holdings"> ニトリホールディングス</label><label><input type="checkbox" data-slug="ppih"> パン・パシフィック・インターナショナルホールディングス</label><label><input type="checkbox" data-slug="ryohin-keikaku"> 良品計画</label></div>
+</details><details>
+<summary>証券（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="daiwa-securities"> 大和証券グループ本社</label><label><input type="checkbox" data-slug="nomura"> 野村ホールディングス</label><label><input type="checkbox" data-slug="sbi"> ＳＢＩホールディングス</label></div>
+</details><details>
+<summary>電力（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="chubu-electric"> 中部電力</label><label><input type="checkbox" data-slug="kansai-electric"> 関西電力</label><label><input type="checkbox" data-slug="tepco"> 東京電力ホールディングス</label></div>
+</details><details>
+<summary>機械（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mitsubishi-heavy"> 三菱重工業</label><label><input type="checkbox" data-slug="komatsu"> 小松製作所</label><label><input type="checkbox" data-slug="daikin"> ダイキン工業</label></div>
+</details><details>
+<summary>精密機器（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="olympus"> オリンパス</label><label><input type="checkbox" data-slug="terumo"> テルモ</label><label><input type="checkbox" data-slug="nikon"> ニコン</label></div>
+</details><details>
+<summary>ガラス・土石（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="agc"> ＡＧＣ</label><label><input type="checkbox" data-slug="taiheiyo-cement"> 太平洋セメント</label><label><input type="checkbox" data-slug="toto"> ＴＯＴＯ</label></div>
+</details><details>
+<summary>非鉄金属（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="dowa-holdings"> ＤＯＷＡホールディングス</label><label><input type="checkbox" data-slug="sumitomo-metal-mining"> 住友金属鉱山</label><label><input type="checkbox" data-slug="mitsubishi-materials"> 三菱マテリアル</label></div>
+</details><details>
+<summary>ゴム製品（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="bridgestone"> ブリヂストン</label><label><input type="checkbox" data-slug="yokohama-rubber"> 横浜ゴム</label><label><input type="checkbox" data-slug="toyo-tire"> ＴＯＹＯＴＩＲＥ</label></div>
+</details><details>
+<summary>パルプ・紙（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="oji-holdings"> 王子ホールディングス</label><label><input type="checkbox" data-slug="rengo"> レンゴー</label><label><input type="checkbox" data-slug="nippon-paper"> 日本製紙</label></div>
+</details><details>
+<summary>石油・石炭（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="cosmo-energy-holdings"> コスモエネルギーホールディングス</label><label><input type="checkbox" data-slug="eneos-holdings"> ＥＮＥＯＳホールディングス</label><label><input type="checkbox" data-slug="idemitsu-kosan"> 出光興産</label></div>
+</details><details>
+<summary>その他製品（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="bandai-namco-holdings"> バンダイナムコホールディングス</label><label><input type="checkbox" data-slug="nintendo"> 任天堂</label><label><input type="checkbox" data-slug="dai-nippon-printing"> 大日本印刷</label></div>
+</details><details>
+<summary>ガス業（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="osaka-gas"> 大阪瓦斯</label><label><input type="checkbox" data-slug="tokyo-gas"> 東京瓦斯</label><label><input type="checkbox" data-slug="toho-gas"> 東邦瓦斯</label></div>
+</details><details>
+<summary>サービス業（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="recruit-holdings"> リクルートホールディングス</label><label><input type="checkbox" data-slug="m3"> エムスリー</label><label><input type="checkbox" data-slug="oriental-land"> オリエンタルランド</label></div>
+</details><details>
+<summary>その他金融（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="orix"> オリックス</label><label><input type="checkbox" data-slug="tokyo-century"> 東京センチュリー</label><label><input type="checkbox" data-slug="credit-saison"> クレディセゾン</label></div>
+</details><details>
+<summary>繊維製品（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="teijin"> 帝人</label><label><input type="checkbox" data-slug="toyobo"> 東洋紡</label><label><input type="checkbox" data-slug="kurashiki-boseki"> 倉敷紡績</label></div>
+</details><details>
+<summary>倉庫運輸（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="mitsubishi-warehouse"> 三菱倉庫</label><label><input type="checkbox" data-slug="nippon-transcity"> 日本トランスシティ</label><label><input type="checkbox" data-slug="kamigumi"> 上組</label></div>
+</details><details>
+<summary>卸売業（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="iwatani"> 岩谷産業</label><label><input type="checkbox" data-slug="medipal-holdings"> メディパルホールディングス</label><label><input type="checkbox" data-slug="paltac"> ＰＡＬＴＡＣ</label></div>
+</details><details>
+<summary>水産農林（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="kyokuyo"> 極洋</label><label><input type="checkbox" data-slug="nissui"> ニッスイ</label><label><input type="checkbox" data-slug="umios"> Ｕｍｉｏｓ</label></div>
+</details><details>
+<summary>鉱業（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="inpex"> ＩＮＰＥＸ</label><label><input type="checkbox" data-slug="japex"> 石油資源開発</label><label><input type="checkbox" data-slug="sumiseki-holdings"> 住石ホールディングス</label></div>
+</details><details>
+<summary>金属製品（3社）</summary>
+<div class="compare-checklist"><label><input type="checkbox" data-slug="toyo-seikan-group-holdings"> 東洋製罐グループホールディングス</label><label><input type="checkbox" data-slug="lixil"> ＬＩＸＩＬ</label><label><input type="checkbox" data-slug="noritz"> ノーリツ</label></div>
+</details></div>
+<div id="compare-result"><p class="lead">上のリストから企業を選ぶと、ここに横比較が表示されます。</p></div>
+</div>
+
+<noscript><p class="warn">このページはJavaScriptを使います。個別の企業比較は各<a href="index.html">業界ページ</a>をご覧ください。</p></noscript>
+
+<section class="source">
+<h2>出典</h2>
+<p>各企業の出典・取得日は<a href="index.html">個別の企業ページ</a>に記載しています。当サイトのデータ取得日 2026-07-10</p>
+<p class="processing">本ページの数値は、上記の有価証券報告書を当サイトが機械的に抽出・整形したものです。</p>
+</section>
+
+</main>
+<footer class="site">
+  <p class="footer-search-label">企業を探す</p>
+  <div class="site-search" data-pos="footer">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
+  <p class="disclaimer">本サイトの数値は公的な一次情報から機械的に抽出したものですが、正確性を保証するものではありません。最終的な判断は必ず原典（有価証券報告書・各社の公式発表）をご確認ください。</p>
+  <p class="license">
+    出典：EDINET閲覧（提出）サイト（各ページに当該書類のURLを記載）／
+    <a href="https://www.digital.go.jp/resources/open_data/public_data_license_v1.0" rel="nofollow">公共データ利用規約（PDL1.0）</a>
+  </p>
+  <p class="license">本ページの数値は、上記の有価証券報告書を当サイトが機械的に抽出・整形したものです。</p>
+</footer>
+</body>
+</html>

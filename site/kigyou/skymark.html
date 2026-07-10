@@ -10,8 +10,9 @@
 <meta property="og:description" content="スカイマークの平均年間給与約593万円、平均勤続年数9.0年、女性管理職比率、男女の賃金の差異を有価証券報告書から抽出。空運他社との横比較つき。">
 <meta property="og:type" content="website">
 <link rel="stylesheet" href="../style.css">
+<script src="../app.js" defer></script>
 </head>
-<body>
+<body data-base="../">
 <header class="site">
   <a class="brand" href="../index.html">
     <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
@@ -22,6 +23,11 @@
     <span class="brand-word">Shukatsu.com</span>
   </a>
   <span class="tagline">有価証券報告書の数字だけで、同業他社を並べる</span>
+  <nav class="header-nav"><a href="../hikaku.html">企業を選んで比較する →</a></nav>
+  <div class="site-search" data-pos="header">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
 </header>
 <main>
 
@@ -133,6 +139,11 @@
 
 </main>
 <footer class="site">
+  <p class="footer-search-label">企業を探す</p>
+  <div class="site-search" data-pos="footer">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
   <p class="disclaimer">本サイトの数値は公的な一次情報から機械的に抽出したものですが、正確性を保証するものではありません。最終的な判断は必ず原典（有価証券報告書・各社の公式発表）をご確認ください。</p>
   <p class="license">
     出典：EDINET閲覧（提出）サイト（各ページに当該書類のURLを記載）／
