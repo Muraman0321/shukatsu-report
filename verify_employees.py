@@ -83,6 +83,30 @@ def xbrl_candidates(rows: list[list[str]]) -> tuple[int | None, int | None, str,
     return std, ext, ext_name, salary
 
 
+# 内訳タグの合計が標準タグと一致する会社
+# ---------------------------------------------------------------------------
+# かんぽ生命保険は「内部管理職員」「営業職員」で従業員数・平均給与とも別々にしか開示せず、
+# 合算した「平均年間給与」というXBRLタグ自体が存在しない。給与という検索アンカーが無いので
+# PDFの表を探せない。ただし内訳タグ（*InternalStaff / *SalesStaff 等）を合計すると
+# 標準タグ（NumberOfEmployees）と6期すべてで完全一致する。これはPDFへのアンカー探索と
+# 同じ役目の検算であり、一致するときだけ標準タグを信頼する。一致しなければ推測せず
+# human review に回す（内訳の呼び名は会社によって違うので、Internal/Sales以外は拾わない）。
+_BREAKDOWN_SUFFIXES = ("InternalStaff", "SalesStaff")
+
+
+def breakdown_sum(rows: list[list[str]]) -> int | None:
+    parts = []
+    for r in rows:
+        if len(r) < 9 or r[2] != CTX:
+            continue
+        elem = r[0].split(":")[-1]
+        if any(elem.endswith(suf) for suf in _BREAKDOWN_SUFFIXES) and elem.startswith("NumberOfEmployees"):
+            v = _int(r[8])
+            if v is not None:
+                parts.append(v)
+    return sum(parts) if len(parts) == len(_BREAKDOWN_SUFFIXES) else None
+
+
 def _int(s: str) -> int | None:
     try:
         return int(s.replace(",", "").strip())
@@ -319,7 +343,14 @@ def main() -> None:
             else:
                 layout = f"再読込も不一致({alt})" if alt is not None else "再読込も読めず"
 
-        if pdf_val is None:
+        bsum = breakdown_sum(rows) if salary is None else None
+        if pdf_val is None and salary is None and std is not None and bsum is not None and bsum == std:
+            # 平均年間給与が単一値でない会社（かんぽ生命保険は「内部管理職員」「営業職員」に
+            # 分かれ、合算した「平均年間給与」という開示自体が無い）。給与という検索アンカーが
+            # 無いのでPDFの表を探せない。ただし内訳タグの合計が標準タグと一致するなら、
+            # それ自体がPDFアンカーの代わりの検算になる。一致しなければ human review のまま。
+            verdict, source, resolved = "XBRL標準タグ（給与非公表のため内訳タグの合計で検算・一致）", "XBRL標準タグ", std
+        elif pdf_val is None:
             verdict, source, resolved = "PDFから読めず（要 human review）", "", None
         elif pdf_val == std:
             verdict = "XBRL標準タグと一致" + (f"（セル位置方式・{layout}）" if layout else "")

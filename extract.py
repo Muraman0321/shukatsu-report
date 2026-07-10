@@ -295,8 +295,14 @@ def extract_year(
 def build_company(
     company: dict[str, str], filings: list[dict[str, str]], verified: dict[str, dict[str, str]]
 ) -> dict[str, Any]:
-    """1社ぶん。決算期の古い順に years を並べ、最新年度を latest として複製する。"""
-    years = [extract_year(company, f, verified) for f in sorted(filings, key=lambda r: r["period_end"])]
+    """1社ぶん。決算期の古い順に years を並べ、最新年度を latest として複製する。
+
+    直近5期に絞る。doc_index.csv は「取得済みの書類」の記録であって「サイトに出す期間」
+    ではない——別企業の決算月に合わせて一覧取得の窓を広げるたびに、既存企業の6期目以前が
+    紛れ込む（実際に132社で発生した）。5年推移という設計を守るのはここの責務。
+    """
+    recent = sorted(filings, key=lambda r: r["period_end"])[-5:]
+    years = [extract_year(company, f, verified) for f in recent]
 
     # 平均年間給与の算定基準が変わった年度。ここをまたいだ増減率を「給与の伸び」と呼んではいけない。
     #   三井不動産2025・三菱地所2026 …「基準を従来の就業人員から正社員へ変更」

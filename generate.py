@@ -96,6 +96,18 @@ SLUG = {
     "E04707": "oriental-land", "E07801": "recruit-holdings", "E05425": "m3",
     "E05346": "tokyo-century", "E04762": "orix", "E03041": "credit-saison",
     "E05080": "rakuten-group", "E05000": "line-yahoo",
+    "E01772": "panasonic-holdings", "E01766": "fujitsu", "E01182": "kyocera", "E01780": "tdk",
+    "E00923": "shionogi", "E21183": "otsuka-holdings", "E00816": "kyowa-kirin",
+    "E00334": "nipponham", "E25303": "calbee", "E27622": "suntory-beverage-food",
+    "E03144": "nitori-holdings", "E03248": "ryohin-keikaku", "E03280": "ppih", "E03013": "takashimaya",
+    "E00988": "fujifilm-holdings", "E00876": "kuraray", "E01888": "nitto-denko",
+    "E03610": "resona-holdings", "E03611": "smtb-group", "E03556": "chiba-bank",
+    "E06141": "dai-ichi-life-group", "E31755": "japan-post-insurance",
+    "E05460": "dena", "E05072": "cyberagent", "E05041": "gmo-internet-group",
+    "E04187": "yamato-holdings", "E32292": "sg-holdings",
+    "E00872": "teijin", "E00525": "toyobo", "E00528": "kurashiki-boseki",
+    "E04283": "mitsubishi-warehouse", "E04289": "nippon-transcity", "E04345": "kamigumi",
+    "E02632": "medipal-holdings", "E02691": "paltac", "E02567": "iwatani",
 }
 GROUP_SLUG = {
     "総合商社": "sogo-shosha", "電気機器": "denki-kiki", "輸送用機器": "yusoyo-kiki",
@@ -107,6 +119,7 @@ GROUP_SLUG = {
     "ガラス・土石": "glass-ceramics", "非鉄金属": "hitetsu-kinzoku", "ゴム製品": "gomu-seihin",
     "パルプ・紙": "pulp-kami", "石油・石炭": "sekiyu-sekitan", "その他製品": "sonota-seihin",
     "ガス業": "gas-gyo", "サービス業": "service-gyo", "その他金融": "sonota-kinyu",
+    "繊維製品": "sen-i-seihin", "倉庫運輸": "souko-unyu", "卸売業": "oroshiuri-gyo",
 }
 
 NA = '<span class="na">非公表</span>'
@@ -120,6 +133,21 @@ def e(s) -> str:
 
 def yen(v) -> str:
     return f"{v:,}円" if isinstance(v, int) else NA
+
+
+def man_plain(v) -> str:
+    """meta description用。man()と違いHTMLの<span>を含まない生テキストを返す。
+
+    かんぽ生命保険（平均年間給与が内部・営業職員で分かれ単一値が無い）で、
+    man()の返す非公表マーク（<span class="na">）がmeta descriptionにそのまま
+    漏れて壊れた文字列になったことで見つかった。検索結果のスニペットが壊れる
+    実害があるので、HTML部品とプレーンテキスト部品を分けた。
+    """
+    return f"約{round(v / 10000):,}万円" if isinstance(v, int) else "非公表"
+
+
+def dec1_plain(v, unit: str = "") -> str:
+    return f"{v:.1f}{unit}" if isinstance(v, (int, float)) else "非公表"
 
 
 def man(v) -> str:
@@ -507,8 +535,8 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 """
     title = f"{c['short']}の平均年収・男女の賃金の差異｜有価証券報告書（{period}期）｜{SITE_NAME}"
     desc = (
-        f"{c['short']}の平均年間給与{man(L['reporting_company']['average_annual_salary_yen'])}、"
-        f"平均勤続年数{dec1(L['reporting_company']['average_tenure_years'], '年')}、"
+        f"{c['short']}の平均年間給与{man_plain(L['reporting_company']['average_annual_salary_yen'])}、"
+        f"平均勤続年数{dec1_plain(L['reporting_company']['average_tenure_years'], '年')}、"
         f"女性管理職比率、男女の賃金の差異を有価証券報告書から抽出。{c['peer_group']}他社との横比較つき。"
     )
     return page(title, desc, body, depth=1, canonical=f"/kigyou/{c['slug']}.html")

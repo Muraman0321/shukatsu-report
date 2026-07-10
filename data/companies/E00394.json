@@ -52,6 +52,50 @@
     {
       "source": {
         "doc_type": "有価証券報告書",
+        "doc_id": "S100L1BN",
+        "period_end": "2020-12-31",
+        "submit_datetime": "2021-03-26 11:38",
+        "description": "有価証券報告書－第97期(令和2年1月1日－令和2年12月31日)"
+      },
+      "employees": {
+        "consolidated": 29850,
+        "reporting_company": 313,
+        "reporting_company_source": "XBRL標準タグと一致",
+        "reporting_company_xbrl_standard_tag": 313,
+        "consolidated_history": {
+          "当期末": 29850,
+          "1年前": 29327,
+          "2年前": 28055,
+          "3年前": 30864,
+          "4年前": 23619
+        }
+      },
+      "reporting_company": {
+        "average_age_years": 46.2,
+        "average_tenure_years": 17.0,
+        "average_annual_salary_yen": 13251563
+      },
+      "diversity": {
+        "scope": null,
+        "female_manager_ratio": null,
+        "female_to_male_wage_ratio_all": null,
+        "female_to_male_wage_ratio_regular": null,
+        "female_to_male_wage_ratio_nonregular": null,
+        "male_childcare_leave_ratio": null,
+        "male_childcare_leave_method": null
+      },
+      "subsidiaries": [],
+      "notes": [
+        "多様性指標は有報に記載なし（非公表）。",
+        "提出会社は持株会社。平均年間給与・平均年齢・平均勤続年数は持株会社本体（313人）の数値であり、事業会社のものではない。"
+      ],
+      "is_holding": true,
+      "basis_change_note": "",
+      "reorganization_note": ""
+    },
+    {
+      "source": {
+        "doc_type": "有価証券報告書",
         "doc_id": "S100NQO3",
         "period_end": "2021-12-31",
         "submit_datetime": "2022-03-28 14:57",
@@ -234,12 +278,14 @@
   "headcount_trend_comparable": false,
   "trend": {
     "average_annual_salary_yen": {
+      "2020-12-31": 13251563,
       "2021-12-31": 11146637,
       "2022-12-31": 12297579,
       "2023-12-31": 12326738,
       "2024-12-31": 12181758
     },
     "employees_reporting_company": {
+      "2020-12-31": 313,
       "2021-12-31": 336,
       "2022-12-31": 164,
       "2023-12-31": 192,
