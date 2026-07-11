@@ -184,8 +184,27 @@ def dec1(v, unit: str = "") -> str:
     return f"{v:.1f}{unit}" if isinstance(v, (int, float)) else NA
 
 
+EXTRA_SLUG_PATH = ROOT / "data" / "company_slugs.json"
+EXTRA_SLUG: dict[str, str] = (
+    json.loads(EXTRA_SLUG_PATH.read_text(encoding="utf-8")) if EXTRA_SLUG_PATH.exists() else {}
+)
+
+
 def slug_of(c: dict) -> str:
-    return SLUG.get(c["edinet_code"], c["edinet_code"])
+    """手動選定(SLUG)を最優先、無ければ自動生成(EXTRA_SLUG, tools/build_company_slugs.py)、
+    どちらにも無ければEDINETコードそのもの。どの段でも一度出したURLは変えない。"""
+    code = c["edinet_code"]
+    return SLUG.get(code) or EXTRA_SLUG.get(code) or code
+
+
+def logo_img(domain: str | None, size: int = 16) -> str:
+    """企業ドメインのfaviconを企業名の隣に出す。ドメインが未解決の企業には何も出さない。"""
+    if not domain:
+        return ""
+    return (
+        f'<img class="co-logo" src="https://www.google.com/s2/favicons?domain={e(domain)}&amp;sz={size * 2}" '
+        f'width="{size}" height="{size}" alt="">'
+    )
 
 
 def short_name(name: str) -> str:
@@ -204,10 +223,13 @@ def sort_key(v, reverse: bool):
 # ---------------------------------------------------------------- 読み込み
 
 def load() -> tuple[list[dict], str]:
+    domains_path = ROOT / "data" / "company_domains.json"
+    domains = json.loads(domains_path.read_text(encoding="utf-8")) if domains_path.exists() else {}
     companies = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(DATA.glob("*.json"))]
     for c in companies:
         c["slug"] = slug_of(c)
         c["short"] = short_name(c["name"])
+        c["domain"] = domains.get(c["edinet_code"])
         pp = PROSE / f"{c['edinet_code']}.json"
         c["prose"] = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
     idx = ROOT / "data" / "doc_index.csv"
@@ -467,25 +489,25 @@ def donut(pct_value: float | None, size: int = 96, stroke: int = 11, method: str
     )
 
 
-def hbars(rows: list[tuple[str, str, float | None]], fmt, scale: str = "group") -> str:
-    """横棒グラフ。(会社名, リンク先href, 値) の並びをCSSの幅%だけで描く。
+def hbars(rows: list[tuple[str, str, float | None, str | None]], fmt, scale: str = "group") -> str:
+    """横棒グラフ。(会社名, リンク先href, 値, ドメイン) の並びをCSSの幅%だけで描く。
 
     SVGではなくCSS幅を使う理由：折れ線グラフでラベルがviewBox外にはみ出て欠ける不具合を
     実ブラウザで踏んだため。横棒はテキストが通常のHTMLノードなら原理的にクリップされない。
     scale="group": その並びの最大値を100%とする（給与など0-100%に自然な上限が無い指標向け）。
     scale="pct100": 値そのもの（0.0-1.0の比率）を0-100%として使う（女性管理職比率など）。
     """
-    vals = [v for _, _, v in rows if v is not None]
+    vals = [v for _, _, v, _ in rows if v is not None]
     if not vals:
         return f"<p>{NA}</p>"
     if scale == "pct100":
-        widths = [v * 100 if v is not None else None for _, _, v in rows]
+        widths = [v * 100 if v is not None else None for _, _, v, _ in rows]
     else:
         m = max(vals) or 1
-        widths = [v / m * 100 if v is not None else None for _, _, v in rows]
+        widths = [v / m * 100 if v is not None else None for _, _, v, _ in rows]
     items = []
-    for (name, href, v), w in zip(rows, widths):
-        label = e(name) if not href else f'<a href="{e(href)}">{e(name)}</a>'
+    for (name, href, v, domain), w in zip(rows, widths):
+        label = logo_img(domain) + (e(name) if not href else f'<a href="{e(href)}">{e(name)}</a>')
         if v is None:
             items.append(
                 f'<div class="hbar-row"><span class="hbar-name" title="{e(name)}">{label}</span>'
@@ -660,7 +682,7 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
     body = f"""
 <nav class="crumb"><a href="../index.html">トップ</a> › <a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a> › {e(c["short"])}</nav>
 
-<h1>{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
+<h1>{logo_img(c["domain"], size=28)}{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
 <p class="lead">有価証券報告書（{e(period)}期）から機械的に抽出した数値です。業種：{e(c["industry"])}／証券コード {e(c["sec_code"][:4])}</p>
 
 {stale_note(c, newest)}
@@ -742,7 +764,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
             mark += ' <span class="stale" title="他社より古い期">古い期</span>'
             stale.append(c["short"])
         rows.append(
-            f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{e(c["short"])}</a>{mark}</th>'
+            f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a>{mark}</th>'
             + "".join(cells) + "</tr>"
         )
     stale_caveat = (
@@ -767,7 +789,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     # 決算期は行ごとに違いうる（12月期・2月期・8月期）。列見出しに年度を書くと嘘になるので、
     # 値の下にその行の期を添える。上場が新しい会社は5期そろわない。
     tr = "".join(
-        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{e(c["short"])}</a></th>'
+        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a></th>'
         f'<td>{man(a[1])}<br><span class="small">{e(a[0][:7])}期</span></td>'
         f'<td>{man(b[1])}<br><span class="small">{e(b[0][:7])}期</span></td>'
         f'<td class="{"up" if r > 0 else "down"}">{r * 100:+.1f}%</td></tr>'
@@ -783,7 +805,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 <tbody>{tr}</tbody></table></div>{excl}"""
 
     cc = "".join(
-        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{e(c["short"])}</a></th>'
+        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a></th>'
         f'<td>{childcare_cell(c["latest"]["diversity"]["male_childcare_leave_ratio"], c["latest"]["diversity"]["male_childcare_leave_method"])}</td></tr>'
         for c in members
     )
@@ -820,7 +842,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     )
 
     def _rows(get):
-        rs = [(c["short"], f'../kigyou/{c["slug"]}.html', get(c)) for c in members]
+        rs = [(c["short"], f'../kigyou/{c["slug"]}.html', get(c), c["domain"]) for c in members]
         rs.sort(key=lambda r: (r[2] is None, -(r[2] or 0)))
         return rs
 
@@ -901,7 +923,7 @@ def hikaku_page(companies: list[dict], groups: dict[str, list[dict]], fetched: s
     group_blocks = []
     for g, members in groups.items():
         opts = "".join(
-            f'<label><input type="checkbox" data-slug="{e(c["slug"])}"> {e(c["short"])}</label>'
+            f'<label><input type="checkbox" data-slug="{e(c["slug"])}"> {logo_img(c["domain"])}{e(c["short"])}</label>'
             for c in sorted(members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True))
         )
         group_blocks.append(f"""<details>
@@ -945,7 +967,7 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
     cards = []
     for g, members in groups.items():
         links = "".join(
-            f'<li><a href="kigyou/{e(c["slug"])}.html">{e(c["short"])}</a>'
+            f'<li><a href="kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a>'
             f'<span class="sal">{man(c["latest"]["reporting_company"]["average_annual_salary_yen"])}</span></li>'
             for c in sorted(members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True))
         )
@@ -1030,6 +1052,8 @@ footer.site .search-input{width:100%;background:var(--card);border:1px solid var
 .search-results a:last-child{border-bottom:none}
 .search-results a:hover,.search-results a.active{background:#eef1fc}
 .search-results .sr-group{color:var(--mut);font-size:11.5px;white-space:nowrap}
+.co-logo{border-radius:3px;vertical-align:-3px;margin-right:5px;flex:none}
+h1 .co-logo{vertical-align:-5px;margin-right:8px}
 .search-results .sr-empty{padding:10px 12px;color:var(--mut);font-size:13px}
 a{color:var(--link);text-decoration-color:rgba(58,82,201,.35);text-underline-offset:2px}
 a:hover{text-decoration-color:var(--link)}
@@ -1155,6 +1179,13 @@ APP_JS = r"""(function () {
     });
   }
 
+  function logoImg(domain, size) {
+    size = size || 16;
+    if (!domain) return "";
+    return '<img class="co-logo" src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) +
+      "&sz=" + (size * 2) + '" width="' + size + '" height="' + size + '" alt="">';
+  }
+
   function manYen(v) {
     return typeof v === "number" ? "約" + Math.round(v / 10000).toLocaleString() + "万円" : "非公表";
   }
@@ -1186,7 +1217,7 @@ APP_JS = r"""(function () {
         return;
       }
       results.innerHTML = matches.map(function (c) {
-        return '<a href="' + base + "kigyou/" + c.slug + '.html"><span>' + esc(c.name) +
+        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.domain) + '<span>' + esc(c.name) +
           '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
       }).join("");
       results.hidden = false;
@@ -1266,15 +1297,15 @@ APP_JS = r"""(function () {
         });
         var html = '<div class="hbars">';
         sorted.forEach(function (r) {
-          var name = r[0], href = r[1], v = r[2];
+          var name = r[0], href = r[1], v = r[2], domain = r[3];
           if (v === null || v === undefined) {
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
               '<span class="hbar-track"></span><span class="hbar-val na">非公表</span></div>';
           } else {
             var w = scalePct ? v * 100 : (v / max * 100);
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
               '<span class="hbar-track"><span class="hbar-fill" style="width:' + Math.max(w, 1.5).toFixed(1) + '%"></span></span>' +
               '<span class="hbar-val">' + fmt(v) + "</span></div>";
           }
@@ -1297,10 +1328,10 @@ APP_JS = r"""(function () {
         }
         var picked = slugs.map(function (s) { return bySlug[s]; }).filter(Boolean);
         var rowsFor = function (key) {
-          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key]]; });
+          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.domain]; });
         };
         var tableRows = picked.map(function (c) {
-          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + esc(c.name) + "</a></th>" +
+          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.domain) + esc(c.name) + "</a></th>" +
             "<td>" + esc((c.period || "").slice(0, 7)) + "期</td>" +
             "<td>" + manYen(c.salary) + "</td>" +
             "<td>" + (typeof c.age === "number" ? c.age.toFixed(1) + "歳" : "非公表") + "</td>" +
@@ -1391,6 +1422,7 @@ def main() -> None:
     summary = [
         {
             "code": c["edinet_code"], "slug": c["slug"], "name": c["short"], "group": c["peer_group"],
+            "domain": c["domain"],
             "is_holding": c["is_holding"], "period": c["latest"]["source"]["period_end"],
             "salary": c["latest"]["reporting_company"]["average_annual_salary_yen"],
             "age": c["latest"]["reporting_company"]["average_age_years"],

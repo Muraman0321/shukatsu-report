@@ -16,6 +16,13 @@
     });
   }
 
+  function logoImg(domain, size) {
+    size = size || 16;
+    if (!domain) return "";
+    return '<img class="co-logo" src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) +
+      "&sz=" + (size * 2) + '" width="' + size + '" height="' + size + '" alt="">';
+  }
+
   function manYen(v) {
     return typeof v === "number" ? "約" + Math.round(v / 10000).toLocaleString() + "万円" : "非公表";
   }
@@ -47,7 +54,7 @@
         return;
       }
       results.innerHTML = matches.map(function (c) {
-        return '<a href="' + base + "kigyou/" + c.slug + '.html"><span>' + esc(c.name) +
+        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.domain) + '<span>' + esc(c.name) +
           '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
       }).join("");
       results.hidden = false;
@@ -127,15 +134,15 @@
         });
         var html = '<div class="hbars">';
         sorted.forEach(function (r) {
-          var name = r[0], href = r[1], v = r[2];
+          var name = r[0], href = r[1], v = r[2], domain = r[3];
           if (v === null || v === undefined) {
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
               '<span class="hbar-track"></span><span class="hbar-val na">非公表</span></div>';
           } else {
             var w = scalePct ? v * 100 : (v / max * 100);
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
               '<span class="hbar-track"><span class="hbar-fill" style="width:' + Math.max(w, 1.5).toFixed(1) + '%"></span></span>' +
               '<span class="hbar-val">' + fmt(v) + "</span></div>";
           }
@@ -158,10 +165,10 @@
         }
         var picked = slugs.map(function (s) { return bySlug[s]; }).filter(Boolean);
         var rowsFor = function (key) {
-          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key]]; });
+          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.domain]; });
         };
         var tableRows = picked.map(function (c) {
-          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + esc(c.name) + "</a></th>" +
+          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.domain) + esc(c.name) + "</a></th>" +
             "<td>" + esc((c.period || "").slice(0, 7)) + "期</td>" +
             "<td>" + manYen(c.salary) + "</td>" +
             "<td>" + (typeof c.age === "number" ? c.age.toFixed(1) + "歳" : "非公表") + "</td>" +
