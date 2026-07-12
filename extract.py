@@ -281,9 +281,10 @@ def extract_year(
         )
 
     if record["is_holding"]:
+        emp_str = f"{emp['reporting_company']:,}人" if emp["reporting_company"] is not None else "非公表"
         record["notes"].append(
             "提出会社は持株会社。平均年間給与・平均年齢・平均勤続年数は持株会社本体"
-            f"（{emp['reporting_company']}人）の数値であり、事業会社のものではない。"
+            f"（{emp_str}）の数値であり、事業会社のものではない。"
         )
 
     if record["diversity"]["female_manager_ratio"] is None and has_reporting:
