@@ -1,0 +1,452 @@
+{
+  "edinet_code": "E00828",
+  "name": "クミアイ化学工業株式会社",
+  "peer_group": "化学",
+  "is_holding": false,
+  "latest": {
+    "period_end": "2025-10-31",
+    "doc_id": "S100XH23",
+    "accounting_standard": "日本基準",
+    "scope": "連結",
+    "revenue_label": "売上高",
+    "consolidated_employees": 2153,
+    "per_capita_denominator": 2153,
+    "per_capita_denominator_label": "連結従業員数",
+    "values": {
+      "revenue": 170462000000.0,
+      "operating_income": 10567000000.0,
+      "ordinary_income": 13363000000.0,
+      "net_income": 4381000000.0,
+      "total_assets": 248205000000.0,
+      "net_assets": 151107000000.0,
+      "equity_ratio": 0.582,
+      "roe": 0.03
+    },
+    "per_capita": {
+      "revenue_per_employee": 79174176,
+      "operating_income_per_employee": 4908035
+    },
+    "provenance": {
+      "revenue": {
+        "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "売上高、経営指標等"
+      },
+      "operating_income": {
+        "element": "jppfs_cor:OperatingIncome",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "営業利益又は営業損失（△）"
+      },
+      "ordinary_income": {
+        "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "経常利益又は経常損失（△）、経営指標等"
+      },
+      "net_income": {
+        "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+      },
+      "total_assets": {
+        "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "総資産額、経営指標等"
+      },
+      "net_assets": {
+        "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "純資産額、経営指標等"
+      },
+      "equity_ratio": {
+        "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "自己資本比率、経営指標等"
+      },
+      "roe": {
+        "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "自己資本利益率、経営指標等"
+      }
+    }
+  },
+  "years": [
+    {
+      "period_end": "2021-10-31",
+      "doc_id": "S100N9S1",
+      "accounting_standard": "日本基準",
+      "scope": "連結",
+      "revenue_label": "売上高",
+      "consolidated_employees": 1818,
+      "per_capita_denominator": 1818,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 118176000000.0,
+        "operating_income": 8456000000.0,
+        "ordinary_income": 12829000000.0,
+        "net_income": 9023000000.0,
+        "total_assets": 169172000000.0,
+        "net_assets": 109954000000.0,
+        "equity_ratio": 0.6141,
+        "roe": 0.0892
+      },
+      "per_capita": {
+        "revenue_per_employee": 65003300,
+        "operating_income_per_employee": 4651265
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "売上高、経営指標等"
+        },
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "純資産額、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本比率、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本利益率、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2022-10-31",
+      "doc_id": "S100Q0EI",
+      "accounting_standard": "日本基準",
+      "scope": "連結",
+      "revenue_label": "売上高",
+      "consolidated_employees": 1832,
+      "per_capita_denominator": 1832,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 145302000000.0,
+        "operating_income": 12673000000.0,
+        "ordinary_income": 23570000000.0,
+        "net_income": 16329000000.0,
+        "total_assets": 204604000000.0,
+        "net_assets": 121995000000.0,
+        "equity_ratio": 0.5643,
+        "roe": 0.1489
+      },
+      "per_capita": {
+        "revenue_per_employee": 79313319,
+        "operating_income_per_employee": 6917576
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "売上高、経営指標等"
+        },
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "純資産額、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本比率、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本利益率、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2023-10-31",
+      "doc_id": "S100SNSO",
+      "accounting_standard": "日本基準",
+      "scope": "連結",
+      "revenue_label": "売上高",
+      "consolidated_employees": 2124,
+      "per_capita_denominator": 2124,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 161002000000.0,
+        "operating_income": 14089000000.0,
+        "ordinary_income": 24115000000.0,
+        "net_income": 18024000000.0,
+        "total_assets": 226939000000.0,
+        "net_assets": 139845000000.0,
+        "equity_ratio": 0.586,
+        "roe": 0.145
+      },
+      "per_capita": {
+        "revenue_per_employee": 75801318,
+        "operating_income_per_employee": 6633239
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "売上高、経営指標等"
+        },
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "純資産額、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本比率、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本利益率、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2024-10-31",
+      "doc_id": "S100V5BU",
+      "accounting_standard": "日本基準",
+      "scope": "連結",
+      "revenue_label": "売上高",
+      "consolidated_employees": 2134,
+      "per_capita_denominator": 2134,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 161049000000.0,
+        "operating_income": 11350000000.0,
+        "ordinary_income": 18300000000.0,
+        "net_income": 13590000000.0,
+        "total_assets": 275474000000.0,
+        "net_assets": 152941000000.0,
+        "equity_ratio": 0.53,
+        "roe": 0.097
+      },
+      "per_capita": {
+        "revenue_per_employee": 75468135,
+        "operating_income_per_employee": 5318650
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "売上高、経営指標等"
+        },
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "純資産額、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本比率、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本利益率、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2025-10-31",
+      "doc_id": "S100XH23",
+      "accounting_standard": "日本基準",
+      "scope": "連結",
+      "revenue_label": "売上高",
+      "consolidated_employees": 2153,
+      "per_capita_denominator": 2153,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 170462000000.0,
+        "operating_income": 10567000000.0,
+        "ordinary_income": 13363000000.0,
+        "net_income": 4381000000.0,
+        "total_assets": 248205000000.0,
+        "net_assets": 151107000000.0,
+        "equity_ratio": 0.582,
+        "roe": 0.03
+      },
+      "per_capita": {
+        "revenue_per_employee": 79174176,
+        "operating_income_per_employee": 4908035
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpcrp_cor:NetSalesSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "売上高、経営指標等"
+        },
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社株主に帰属する当期純利益又は親会社株主に帰属する当期純損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "純資産額、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:EquityToAssetRatioSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本比率、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquitySummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "自己資本利益率、経営指標等"
+        }
+      }
+    }
+  ]
+}

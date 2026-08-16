@@ -41,11 +41,37 @@ python fetch_edinet.py find --from 2026-06-01 --to 2026-06-30 --append  # 書類
 python fetch_edinet.py get --types 5,2                          # XBRL(CSV) と PDF を取得（1req/秒。カンマ区切り）
 python verify_employees.py                                      # 有報PDFと突き合わせ → data/employees_verified.csv
 python extract.py                                               # 機械抽出 → data/companies/*.json
+python extract_financials.py                                    # 任意。財務（連結）→ data/financials/*.json
+python verify_financials.py                                     # 任意。財務の検算 → data/financials_review.csv
+python extract_overseas.py                                      # 任意。海外売上高比率 → data/overseas/*.json
 python generate.py                                              # 静的サイト → site/
 python write_prose.py --submit / --collect                      # 任意。Claudeが解説文だけ書く（数値は渡すだけ）
 ```
 
 `write_prose.py` を実行しなくてもサイトは完全に成立する。文章は装飾であり、商品は数字の並びである。
+`extract_financials.py` / `extract_overseas.py` も同様に任意で、`data/financials` `data/overseas` が
+空でも `generate.py` は通る（財務の節とランキングの一部が出なくなるだけ）。留学中に壊れる部品を増やさないため、
+これらは既存の抽出とは別ファイルに分けてある。
+
+## 出せるもの・出せないもの（実測にもとづく）
+
+最新の有報1,549件を機械的に走査して、載せられるかどうかを確かめた結果:
+
+| 項目 | 歩留まり | 判断 |
+|---|---|---|
+| 売上高／経常収益・純利益・総資産・自己資本比率・ROE | 99〜100% | 掲載する |
+| 営業利益 | 93% | 掲載する（IFRS・米国基準は表示しない会社がある） |
+| 経常利益 | 85% | 掲載する（IFRSに経常利益の概念は無い） |
+| 海外売上高比率 | 全体7.7%／地域情報のある大手の67% | **取れた会社だけ**掲載する |
+| 離職率 | 言及34%・数値まで取れるのは13% | **掲載しない**（下記） |
+| 有給取得率・平均残業時間 | 21%・18% | 掲載しない |
+| エンゲージメントスコア | 言及76% | 掲載しない（5点満点・100点・肯定回答率が混在し比較できない） |
+
+**離職率を載せない理由**は歩留まりだけではない。実際に拾えた記述を見ると、
+「正社員離職率4.5%以下（2031年3月期）」は中期経営計画の**目標値**、
+「育児休業からの定着率100%」は**別の指標**、「主要4社依願離職率11.0%」は**対象範囲が限定**されている。
+実績・目標・対象範囲を機械的に判別できない。この品質のものを載せれば、
+このサイトの唯一の資産である信頼を削ることになる。
 
 ## 出典とライセンス
 

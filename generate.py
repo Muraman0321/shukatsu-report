@@ -36,7 +36,10 @@ import json
 import math
 import os
 import shutil
+import sys
 from pathlib import Path
+
+import rankings
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "companies"
@@ -226,12 +229,18 @@ def load() -> tuple[list[dict], str]:
     domains_path = ROOT / "data" / "company_domains.json"
     domains = json.loads(domains_path.read_text(encoding="utf-8")) if domains_path.exists() else {}
     companies = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(DATA.glob("*.json"))]
+    fin = rankings.load_financials()
+    ovs = rankings.load_overseas()
     for c in companies:
         c["slug"] = slug_of(c)
         c["short"] = short_name(c["name"])
         c["domain"] = domains.get(c["edinet_code"])
         pp = PROSE / f"{c['edinet_code']}.json"
         c["prose"] = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
+        # 財務（extract_financials.py の出力）。無い会社・無い項目は素通しし、
+        # 「あれば載せる」扱いにする。財務が1社も無くてもサイトは成立する
+        c["fin"] = fin.get(c["edinet_code"])
+        c["overseas"] = ovs.get(c["edinet_code"])
     idx = ROOT / "data" / "doc_index.csv"
     fetched = dt.date.fromtimestamp(idx.stat().st_mtime).isoformat()
     return companies, fetched
@@ -278,7 +287,7 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
   <span class="tagline">{e(TAGLINE)}</span>
-  <nav class="header-nav"><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
+  <nav class="header-nav"><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
   {search_box("header")}
 </header>
 <main>
@@ -561,6 +570,133 @@ SALARY_CAVEAT = (
 
 # ---------------------------------------------------------------- 企業ページ
 
+# 東証33業種は学生の比較単位より粗い。「情報・通信業」165社にはNTT（33万人）と
+# 従業員数千人のネット企業が同居し、1つの表に並べても比較にならない。
+# ただし1,549社をサブ業界へ人手で仕分けると、誤分類がそのまま「同業として並べる」
+# という商品を壊す。そこで**判断の要らない客観軸＝連結従業員数**で帯に切る。
+SIZE_BANDS = [
+    (100_000, "従業員10万人以上"),
+    (10_000, "従業員1万人以上10万人未満"),
+    (1_000, "従業員1,000人以上1万人未満"),
+    (0, "従業員1,000人未満"),
+]
+BAND_SPLIT_MIN = 40  # これ未満の業界は分けない（分けると各帯が数社になって比較にならない）
+
+
+def size_band(c: dict) -> tuple[int, str]:
+    n = c["latest"]["employees"]["consolidated"]
+    if n is None:
+        return (-1, "従業員数が非公表")
+    for i, (lo, label) in enumerate(SIZE_BANDS):
+        if n >= lo:
+            return (len(SIZE_BANDS) - i, label)
+    return (-1, "従業員数が非公表")
+
+
+def oku(v) -> str:
+    """億円表示。桁が大きい財務値を就活生が読める単位に落とす。"""
+    if v is None:
+        return NA
+    return f"{v / 100_000_000:,.0f}億円" if abs(v) >= 100_000_000 else f"{v / 1_000_000:,.0f}百万円"
+
+
+def financial_section(c: dict) -> str:
+    """財務（連結）。**平均年収は提出会社・財務は連結**という違いを必ず書く。
+
+    ここを混ぜると「連結の売上を単体の人数で割る」類の誤りになる。1人当たりの分母は
+    extract_financials.py が財務と同じスコープで選んでおり、その分母をそのまま表示する。
+    """
+    f = c.get("fin")
+    if not f:
+        return ""
+    lat = f["latest"]
+    v, pc = lat["values"], lat["per_capita"]
+    if not v:
+        return ""
+
+    rev_label = lat.get("revenue_label") or "売上高"
+    std = lat.get("accounting_standard", "")
+    scope = lat.get("scope", "連結")
+
+    rows = [("決算期", f'{e(lat["period_end"][:7])}期'), ("会計基準", e(std)), ("集計範囲", e(scope))]
+    for label, key in ((rev_label, "revenue"), ("営業利益", "operating_income"),
+                       ("経常利益", "ordinary_income"), ("親会社株主に帰属する当期純利益", "net_income"),
+                       ("総資産", "total_assets"), ("純資産", "net_assets")):
+        if key in v:
+            rows.append((label, oku(v[key])))
+    if "equity_ratio" in v:
+        rows.append(("自己資本比率", pct(v["equity_ratio"])))
+    if "roe" in v:
+        rows.append(("自己資本利益率（ROE）", pct(v["roe"])))
+    kv = "".join(f'<tr><th scope="row">{k}</th><td>{val}</td></tr>' for k, val in rows)
+
+    per = ""
+    if pc:
+        denom = lat.get("per_capita_denominator")
+        denom_label = lat.get("per_capita_denominator_label") or ""
+        prows = []
+        if "revenue_per_employee" in pc:
+            prows.append((f"1人当たり{rev_label}", oku(pc["revenue_per_employee"])))
+        if "operating_income_per_employee" in pc:
+            prows.append(("1人当たり営業利益", oku(pc["operating_income_per_employee"])))
+        pkv = "".join(f'<tr><th scope="row">{e(k)}</th><td>{val}</td></tr>' for k, val in prows)
+        per = f"""<h3>従業員1人当たり</h3>
+<table class="kv">{pkv}</table>
+<p class="caveat">分母は{e(denom_label)}{num(denom, "人") if denom else ""}です。
+仲介取引の多い商社や、少人数で大きな資産を動かす業態は大きく出ます。人数の効率を見る指標であって、
+給与の高さを意味しません。</p>"""
+
+    trend = {y["period_end"]: y["values"]["revenue"] for y in f["years"] if y["values"].get("revenue")}
+    trend_html = ""
+    if len(trend) >= 2:
+        scopes = {y.get("scope") for y in f["years"]}
+        mixed = (
+            '<p class="caveat">年度によって連結・単体の別が変わっているため、この推移は連続していません。</p>'
+            if len(scopes) > 1 else ""
+        )
+        trend_html = f'<h3>{e(rev_label)}の推移</h3>{line_chart(trend, oku)}{mixed}'
+
+    # 海外売上高比率。有報の「地域ごとの情報」から読み、同じ有報のXBRLの売上高と
+    # 一致したものだけが data/overseas に入っている（extract_overseas.py）
+    ov = c.get("overseas")
+    overseas_html = ""
+    if ov:
+        ovrows = "".join(
+            f'<tr><th scope="row">{e(k)}</th><td>{val}</td></tr>' for k, val in (
+                ("海外売上高比率", f'<b>{pct(ov["overseas_ratio"])}</b>'),
+                ("海外", oku(ov["overseas"])),
+                ("日本", oku(ov["japan"])),
+                ("合計", oku(ov["total"])),
+            )
+        )
+        overseas_html = f"""<h3>海外売上高比率</h3>
+<table class="kv">{ovrows}</table>
+<p class="caveat">有価証券報告書の連結財務諸表注記「地域ごとの情報」から抽出しました。
+合計が同じ有報のXBRLに記載された売上高と一致することを確認しています（差 {ov.get("diff_vs_xbrl", 0) * 100:.2f}%）。
+<b>海外売上があることと、海外駐在の機会があることは別です。</b>この数値は売上の出どころであって、
+働く場所の内訳ではありません。</p>"""
+
+    ifrs_note = (
+        '<p class="caveat">IFRSの営業利益は日本基準と定義が異なります（非経常項目の扱い）。'
+        "基準の違う会社と営業利益を直接比べないでください。</p>" if std == "IFRS" else ""
+    )
+    bank_note = (
+        '<p class="caveat">銀行・保険業に「売上高」という科目はありません。'
+        "有価証券報告書の経常収益を掲載しています。</p>" if "経常収益" in rev_label else ""
+    )
+
+    return f"""<section>
+<h2>財務（{e(scope)}）</h2>
+<p class="caveat"><b>この節だけ集計範囲が違います。</b>平均年間給与・平均勤続年数は提出会社（単体）の数値ですが、
+財務は{e(scope)}の数値です。人数も{e(scope)}のものを使っています。</p>
+<table class="kv">{kv}</table>
+{bank_note}{ifrs_note}
+{per}
+{overseas_html}
+{trend_html}
+</section>"""
+
+
 def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> str:
     L = c["latest"]
     emp, rc, div = L["employees"], L["reporting_company"], L["diversity"]
@@ -679,6 +815,40 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
     )
     gslug = GROUP_SLUG.get(c["peer_group"], c["peer_group"])
 
+    # 規模の近い同業。33業種は粗く、165社の「情報・通信業」ではNTTと数千人の会社が同居する。
+    # 連結従業員数が近い順という機械的な基準なので、恣意的な分類を持ち込まずに済む。
+    near_html = ""
+    mine = c["latest"]["employees"]["consolidated"]
+    if mine and len(peers) > 6:
+        others = [x for x in peers
+                  if x["edinet_code"] != c["edinet_code"] and x["latest"]["employees"]["consolidated"]]
+        near = sorted(others, key=lambda x: abs(x["latest"]["employees"]["consolidated"] - mine))[:5]
+        if near:
+            shown = sorted([c] + near,
+                           key=lambda x: -(x["latest"]["employees"]["consolidated"] or 0))
+            nrows = "".join(
+                f'<tr{" class=\"self\"" if x["edinet_code"] == c["edinet_code"] else ""}>'
+                f'<th scope="row">'
+                + (f'{logo_img(x["domain"])}{e(x["short"])}' if x["edinet_code"] == c["edinet_code"]
+                   else f'<a href="{e(x["slug"])}.html">{logo_img(x["domain"])}{e(x["short"])}</a>')
+                + "</th>"
+                f'<td>{num(x["latest"]["employees"]["consolidated"], "人")}</td>'
+                f'<td>{man(x["latest"]["reporting_company"]["average_annual_salary_yen"])}</td>'
+                f'<td>{dec1(x["latest"]["reporting_company"]["average_tenure_years"], "年")}</td>'
+                f'<td>{pct(x["latest"]["diversity"]["female_manager_ratio"])}</td>'
+                f'<td class="small">{e(x["latest"]["source"]["period_end"][:7])}期</td></tr>'
+                for x in shown
+            )
+            near_html = f"""<section>
+<h2>規模の近い同業他社</h2>
+<p class="lead">{e(c["peer_group"])}は{len(peers)}社あり、規模も事業もばらばらです。
+<b>連結従業員数が{e(c["short"])}に近い順に5社</b>を並べました。分類の判断を入れず、人数の近さだけで選んでいます。</p>
+<div class="scroll"><table class="grid">
+<thead><tr><th>会社</th><th>従業員数(連結)</th><th>平均年間給与</th><th>平均勤続年数</th><th>女性管理職比率</th><th>決算期</th></tr></thead>
+<tbody>{nrows}</tbody></table></div>
+<p class="caveat">平均年間給与・平均勤続年数・女性管理職比率は提出会社（単体）、従業員数は連結です。</p>
+</section>"""
+
     body = f"""
 <nav class="crumb"><a href="../index.html">トップ</a> › <a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a> › {e(c["short"])}</nav>
 
@@ -707,6 +877,10 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 {diversity_section}
 
 <div class="cols">{div_trend}</div>
+
+{financial_section(c)}
+
+{near_html}
 
 {sub_html}
 {notes_html}
@@ -753,8 +927,24 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     has_holding = any(c.get("is_holding") for c in members)
 
     head = "".join(f"<th>{e(t)}</th>" for t, *_ in PEER_COLS)
+    # 社数の多い業界は規模帯で区切る。NTTと従業員数千人の会社を同じ並びで見ても比較にならない
+    banded = len(members) > BAND_SPLIT_MIN
+    if banded:
+        members = sorted(
+            members,
+            key=lambda c: (-size_band(c)[0],
+                           sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True)),
+        )
     rows = []
+    current_band = None
     for c in members:
+        if banded and size_band(c)[1] != current_band:
+            current_band = size_band(c)[1]
+            n_in_band = sum(1 for x in members if size_band(x)[1] == current_band)
+            rows.append(
+                f'<tr class="band"><th colspan="{len(PEER_COLS) + 1}" scope="colgroup">'
+                f'{e(current_band)}（{n_in_band}社）</th></tr>'
+            )
         cells = []
         for _, get, fmt, _hi in PEER_COLS:
             v = get(c)
@@ -767,13 +957,18 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
             f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a>{mark}</th>'
             + "".join(cells) + "</tr>"
         )
+    band_note = (
+        '<p class="caveat">この業界は社数が多いため、<b>連結従業員数の規模帯</b>で区切ってあります。'
+        "東京証券取引所の33業種区分は就活で比べたい単位より粗く、同じ「業界」に規模も事業も違う会社が"
+        "混ざるためです。帯の中は平均年間給与の高い順です。</p>" if banded else ""
+    )
     stale_caveat = (
         f'<p class="caveat"><b>{e("、".join(stale))}</b> は最新の有価証券報告書がまだ提出されていないため、'
         "一世代前の期の数値です。決算期の列を確認してください。</p>" if stale else ""
     )
     main_table = f"""<div class="scroll"><table class="grid rank">
 <thead><tr><th>会社</th>{head}</tr></thead>
-<tbody>{"".join(rows)}</tbody></table></div>{stale_caveat}"""
+<tbody>{"".join(rows)}</tbody></table></div>{band_note}{stale_caveat}"""
 
     # 5年推移は基準変更のあった会社を落とす。落とした事実を必ず書く。
     trend_rows, excluded = [], []
@@ -813,6 +1008,56 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 <thead><tr><th>会社</th><th>男性育休取得率（算出方式つき）</th></tr></thead>
 <tbody>{cc}</tbody></table></div>
 <p class="caveat">{CHILDCARE_CAVEAT}<b>そのため、この表は高い順に並べていません。</b></p>"""
+
+    # 財務（連結）の横比較。数値のある会社だけを1人当たり売上高の高い順に並べる。
+    # 平均年収の表とは集計範囲が違う（あちらは提出会社）ので、節を分けて明示する。
+    fin_rows = []
+    for m in members:
+        f = m.get("fin")
+        if not f or not f["latest"]["values"]:
+            continue
+        lat = f["latest"]
+        fin_rows.append((m, lat, lat["per_capita"].get("revenue_per_employee")))
+    fin_rows.sort(key=lambda r: (r[2] is None, -(r[2] or 0)))
+    fin_table = ""
+    if fin_rows:
+        body_rows = "".join(
+            f'<tr><th scope="row"><a href="../kigyou/{e(m["slug"])}.html">{logo_img(m["domain"])}{e(m["short"])}</a></th>'
+            f'<td>{oku(lat["values"].get("revenue"))}</td>'
+            f'<td>{oku(lat["values"].get("operating_income"))}</td>'
+            f'<td>{oku(rpe) if rpe else NA}</td>'
+            f'<td>{oku(lat["per_capita"].get("operating_income_per_employee")) if lat["per_capita"].get("operating_income_per_employee") else NA}</td>'
+            f'<td>{pct(lat["values"].get("equity_ratio"))}</td>'
+            f'<td>{pct((m.get("overseas") or {}).get("overseas_ratio"))}</td>'
+            f'<td class="small">{e(lat.get("accounting_standard", ""))}</td>'
+            f'<td class="small">{e(lat["period_end"][:7])}期</td></tr>'
+            for m, lat, rpe in fin_rows
+        )
+        n_ov = sum(1 for m, _, _ in fin_rows if m.get("overseas"))
+        ov_note = (
+            f'<p class="caveat">海外売上高比率は{n_ov}社ぶんだけ載っています。'
+            "有価証券報告書の「地域ごとの情報」は単一セグメントの会社に開示義務が無く、"
+            "記載のある会社だけを、同じ有報のXBRLの売上高と突き合わせて一致した場合に限り掲載しています。"
+            "<b>海外売上があることと海外駐在の機会があることは別です。</b></p>"
+            if n_ov else ""
+        )
+        missing = len(members) - len(fin_rows)
+        missing_note = (
+            f'<p class="caveat">{missing}社は財務数値を有価証券報告書から確定できなかったため載せていません。</p>'
+            if missing else ""
+        )
+        fin_table = f"""<section>
+<h2>財務（連結）と従業員1人当たりの指標</h2>
+<p class="lead"><b>この表だけ集計範囲が違います。</b>上の平均年収・勤続年数は提出会社（単体）ですが、
+ここは連結です。1人当たりの値は連結の数値を連結従業員数で割ったもので、人数の効率を見る指標です。
+給与の高さを意味しません。</p>
+<div class="scroll"><table class="grid rank">
+<thead><tr><th>会社</th><th>売上高／経常収益</th><th>営業利益</th><th>1人当たり売上高</th><th>1人当たり営業利益</th><th>自己資本比率</th><th>海外売上高比率</th><th>会計基準</th><th>決算期</th></tr></thead>
+<tbody>{body_rows}</tbody></table></div>
+{missing_note}{ov_note}
+<p class="caveat">銀行・保険業に「売上高」の科目はないため、経常収益を掲載しています。
+IFRSの営業利益は日本基準と定義が異なります（非経常項目の扱い）ので、会計基準の列を確認してください。</p>
+</section>"""
 
     sub_html = ""
     if has_holding:
@@ -895,6 +1140,8 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 <h2>男性育休取得率</h2>
 {childcare_table}
 </section>
+
+{fin_table}
 
 {sub_html}
 
@@ -988,6 +1235,18 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
 数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社・計{sum(len(c["years"]) for c in companies)}件の有価証券報告書）。
 AIに数字を書かせていません。データが無い項目は推測で埋めず「非公表」と書きます。
 </p>
+<section>
+<h2>ランキングと条件で探す</h2>
+<p>業界をまたいで並べたり、条件で絞り込んだりできます。掲載企業から広告費を受け取っていないので、企業に不利な順位もそのまま出します。</p>
+<ul class="linklist">
+<li><a href="ranking/index.html">ランキングと条件別の企業一覧（すべて）</a><span class="small">平均年収・平均勤続年数・女性管理職比率・1人当たり売上高ほか</span></li>
+<li><a href="ranking/nenshu.html">平均年収ランキング</a><span class="small">持株会社は本体の数字になるため除いています</span></li>
+<li><a href="ranking/nenshu-nobi.html">平均年収の5年増減率ランキング</a><span class="small">算定基準が変わった会社は対象外</span></li>
+<li><a href="ranking/nenshu-1000man.html">平均年収1,000万円以上の企業一覧</a></li>
+<li><a href="ranking/kinzoku-20nen.html">平均勤続年数20年以上の企業一覧</a></li>
+</ul>
+</section>
+
 <div class="cards">{"".join(cards)}</div>
 
 <section>
@@ -1084,6 +1343,17 @@ table{border-collapse:collapse;width:100%}
 .grid tbody tr:hover{background:#f7f8fc}
 .grid .parent{text-align:left;color:var(--mut);font-size:12px}
 .rank tbody tr:first-child{background:#f0f3fd}
+.grid tbody tr.band th{background:#eef1f7;text-align:left;font-size:12px;color:var(--accent-dk);letter-spacing:.02em;padding:7px 11px}
+.grid tbody tr.band:hover{background:#eef1f7}
+.grid tbody tr.self{background:#f0f3fd}
+.grid tbody tr.self th{color:var(--accent-dk)}
+.rank tbody tr.band:first-child{background:#eef1f7}
+.grid td.rank-no{text-align:center;color:var(--mut);font-variant-numeric:tabular-nums;width:3.5em}
+.rank tbody tr:nth-child(-n+3) td.rank-no{color:var(--accent-dk);font-weight:800}
+.linklist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.linklist li{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px}
+.linklist li a{font-weight:700}
+.linklist li .small{display:block;color:var(--mut);margin-top:3px}
 .hd{font-size:10px;background:#eef1fc;color:var(--accent-dk);padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .stale{font-size:10px;background:var(--warn);color:#8a5c14;padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .method{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;font-weight:700}
@@ -1409,6 +1679,15 @@ def main() -> None:
     (SITE / "hikaku.html").write_text(hikaku_page(companies, groups, fetched), encoding="utf-8")
 
     urls = ["/index.html", "/hikaku.html"]
+
+    # ランキングと条件別一覧。財務データ（data/financials）が無くても、
+    # 年収・勤続年数など既存の指標ぶんだけが出る設計にしてある。
+    # ここで落ちても企業ページ・業界ページは出したいので、失敗はURLに載せず先へ進む。
+    try:
+        urls += rankings.build(sys.modules[__name__], companies, fetched, SITE)
+    except Exception as exc:  # noqa: BLE001 — 商品である企業ページの生成を止めないための握り
+        print(f"  !! ランキングの生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
+
     for g, members in groups.items():
         path = f"/gyoukai/{GROUP_SLUG.get(g, g)}.html"
         (SITE / path.lstrip("/")).write_text(group_page(g, members, fetched), encoding="utf-8")

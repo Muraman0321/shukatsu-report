@@ -157,7 +157,7 @@
       "reporting_company": {
         "average_age_years": 40.4,
         "average_tenure_years": 8.3,
-        "average_annual_salary_yen": 8831677000000
+        "average_annual_salary_yen": null
       },
       "diversity": {
         "scope": null,
@@ -171,7 +171,8 @@
       "subsidiaries": [],
       "notes": [
         "多様性指標は有報に記載なし（非公表）。",
-        "提出会社の従業員数を有報PDFから確定できていない（要確認）。"
+        "提出会社の従業員数を有報PDFから確定できていない（要確認）。",
+        "平均年間給与を掲載しない：有価証券報告書のXBRLの値が 8,831,677,000,000 で、平均年間給与としてありえない範囲。提出企業のタグ付け誤りと考えられるため、推測で補わず非公表として扱う。"
       ],
       "is_holding": false,
       "basis_change_note": "",
@@ -262,13 +263,20 @@
   ],
   "salary_breaks": {},
   "headcount_breaks": {},
+  "value_anomalies": [
+    {
+      "period_end": "2023-12-31",
+      "field": "average_annual_salary_yen",
+      "raw_value": 8831677000000,
+      "reason": "平均年間給与としてありえない範囲"
+    }
+  ],
   "salary_trend_comparable": true,
   "headcount_trend_comparable": true,
   "trend": {
     "average_annual_salary_yen": {
       "2021-12-31": 9418723,
       "2022-12-31": 8851404,
-      "2023-12-31": 8831677000000,
       "2024-12-31": 9001280,
       "2025-12-31": 9888472
     },

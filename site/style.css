@@ -63,6 +63,17 @@ table{border-collapse:collapse;width:100%}
 .grid tbody tr:hover{background:#f7f8fc}
 .grid .parent{text-align:left;color:var(--mut);font-size:12px}
 .rank tbody tr:first-child{background:#f0f3fd}
+.grid tbody tr.band th{background:#eef1f7;text-align:left;font-size:12px;color:var(--accent-dk);letter-spacing:.02em;padding:7px 11px}
+.grid tbody tr.band:hover{background:#eef1f7}
+.grid tbody tr.self{background:#f0f3fd}
+.grid tbody tr.self th{color:var(--accent-dk)}
+.rank tbody tr.band:first-child{background:#eef1f7}
+.grid td.rank-no{text-align:center;color:var(--mut);font-variant-numeric:tabular-nums;width:3.5em}
+.rank tbody tr:nth-child(-n+3) td.rank-no{color:var(--accent-dk);font-weight:800}
+.linklist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.linklist li{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px}
+.linklist li a{font-weight:700}
+.linklist li .small{display:block;color:var(--mut);margin-top:3px}
 .hd{font-size:10px;background:#eef1fc;color:var(--accent-dk);padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .stale{font-size:10px;background:var(--warn);color:#8a5c14;padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .method{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;font-weight:700}

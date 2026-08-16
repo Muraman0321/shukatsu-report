@@ -122,6 +122,68 @@ class Facts:
         return None if v is None else int(v)
 
 
+# 提出企業のXBRLタグ付けそのものが誤っていることがある（全1,549社を1列に並べて発見）。
+#   ヨロズ2026年3月期    6,387,000,000円  … 前期6,417,000円の1,000倍
+#   加藤製作所2026年3月期    60,010,000円  … 前期5,920,000円の10倍
+#   ヤマウラ2022年3月期           7,196円  … 千円単位のまま記載
+#   日本化薬2022年3月期           7,343円  … 同上
+# 単位（ユニットID）はいずれもJPY・円で正しいので、単位を見ても検出できない。
+# **値そのものの妥当性**で弾くしかない。埋めず、代わりに非公表として注記を残す。
+SALARY_MIN_YEN = 1_000_000
+SALARY_MAX_YEN = 100_000_000
+SALARY_MEDIAN_RATIO = 5.0   # 5期の中央値と5倍以上ずれた年は採らない
+AGE_RANGE = (15.0, 75.0)
+TENURE_RANGE = (0.0, 50.0)
+
+
+def _median(xs: list[float]) -> float | None:
+    if not xs:
+        return None
+    s = sorted(xs)
+    return s[len(s) // 2]
+
+
+def drop_impossible_values(years: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """ありえない平均年間給与・平均年齢・平均勤続年数を落とし、落とした事実を記録する。
+
+    中央値との比較は、5期のうち1〜2期だけ桁を間違えている実例（上記4社）を捉えるため。
+    期が3つ未満のときは中央値が外れ値に引きずられるので、範囲チェックだけにする。
+    """
+    dropped: list[dict[str, Any]] = []
+
+    def _drop(y: dict[str, Any], field: str, label: str, value, reason: str) -> None:
+        y["reporting_company"][field] = None
+        y["notes"].append(
+            f"{label}を掲載しない：有価証券報告書のXBRLの値が {value:,} で、{reason}。"
+            "提出企業のタグ付け誤りと考えられるため、推測で補わず非公表として扱う。"
+        )
+        dropped.append({"period_end": y["source"]["period_end"], "field": field,
+                        "raw_value": value, "reason": reason})
+
+    salaries = [y["reporting_company"]["average_annual_salary_yen"] for y in years]
+    med = _median([v for v in salaries if v]) if len([v for v in salaries if v]) >= 3 else None
+    for y in years:
+        v = y["reporting_company"]["average_annual_salary_yen"]
+        if v is None:
+            continue
+        if not (SALARY_MIN_YEN <= v <= SALARY_MAX_YEN):
+            _drop(y, "average_annual_salary_yen", "平均年間給与", v, "平均年間給与としてありえない範囲")
+        elif med and (v / med >= SALARY_MEDIAN_RATIO or med / v >= SALARY_MEDIAN_RATIO):
+            _drop(y, "average_annual_salary_yen", "平均年間給与", v,
+                  f"同じ会社の5期の中央値 {med:,}円 と桁が合わない")
+
+    for field, label, (lo, hi) in (
+        ("average_age_years", "平均年齢", AGE_RANGE),
+        ("average_tenure_years", "平均勤続年数", TENURE_RANGE),
+    ):
+        for y in years:
+            v = y["reporting_company"][field]
+            if v is not None and not (lo <= v <= hi):
+                _drop(y, field, label, v, f"{lo:.0f}〜{hi:.0f}の範囲から外れている")
+
+    return dropped
+
+
 def _int_or_none(s: str | None) -> int | None:
     try:
         return int(str(s).strip())
@@ -304,6 +366,9 @@ def build_company(
     """
     recent = sorted(filings, key=lambda r: r["period_end"])[-5:]
     years = [extract_year(company, f, verified) for f in recent]
+    # 提出企業のタグ付け誤りを落とす。trend を作る前に落とさないと、
+    # 増減率が「+114,449%」のような数字になって表に出る
+    value_anomalies = drop_impossible_values(years)
 
     # 平均年間給与の算定基準が変わった年度。ここをまたいだ増減率を「給与の伸び」と呼んではいけない。
     #   三井不動産2025・三菱地所2026 …「基準を従来の就業人員から正社員へ変更」
@@ -326,6 +391,8 @@ def build_company(
         "years": years,
         "salary_breaks": salary_breaks,
         "headcount_breaks": headcount_breaks,
+        # 落とした値の記録。監査証跡としてJSONに残す（Git履歴で追える）
+        "value_anomalies": value_anomalies,
         # 断絶をまたぐ増減率は「給与の伸び」ではない。伸び率を出さず、注記を併記する
         "salary_trend_comparable": not salary_breaks,
         "headcount_trend_comparable": not (salary_breaks or headcount_breaks),

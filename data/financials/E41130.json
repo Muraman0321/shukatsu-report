@@ -1,0 +1,94 @@
+{
+  "edinet_code": "E41130",
+  "name": "ＡＲＣＨＩＯＮ株式会社",
+  "peer_group": "輸送用機器",
+  "is_holding": false,
+  "latest": {
+    "period_end": "2026-03-31",
+    "doc_id": "S100YK16",
+    "accounting_standard": "日本基準",
+    "scope": "単体",
+    "revenue_label": null,
+    "consolidated_employees": null,
+    "per_capita_denominator": null,
+    "per_capita_denominator_label": null,
+    "values": {
+      "operating_income": -73000000.0,
+      "ordinary_income": -407000000.0,
+      "total_assets": 0.0,
+      "net_assets": -407000000.0
+    },
+    "per_capita": {},
+    "provenance": {
+      "operating_income": {
+        "element": "jppfs_cor:OperatingIncome",
+        "resolved_by": "標準タグ",
+        "scope": "単体",
+        "label": "営業利益又は営業損失（△）"
+      },
+      "ordinary_income": {
+        "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "単体",
+        "label": "経常利益又は経常損失（△）、経営指標等"
+      },
+      "total_assets": {
+        "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "単体",
+        "label": "総資産額、経営指標等"
+      },
+      "net_assets": {
+        "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "単体",
+        "label": "純資産額、経営指標等"
+      }
+    }
+  },
+  "years": [
+    {
+      "period_end": "2026-03-31",
+      "doc_id": "S100YK16",
+      "accounting_standard": "日本基準",
+      "scope": "単体",
+      "revenue_label": null,
+      "consolidated_employees": null,
+      "per_capita_denominator": null,
+      "per_capita_denominator_label": null,
+      "values": {
+        "operating_income": -73000000.0,
+        "ordinary_income": -407000000.0,
+        "total_assets": 0.0,
+        "net_assets": -407000000.0
+      },
+      "per_capita": {},
+      "provenance": {
+        "operating_income": {
+          "element": "jppfs_cor:OperatingIncome",
+          "resolved_by": "標準タグ",
+          "scope": "単体",
+          "label": "営業利益又は営業損失（△）"
+        },
+        "ordinary_income": {
+          "element": "jpcrp_cor:OrdinaryIncomeLossSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "単体",
+          "label": "経常利益又は経常損失（△）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "単体",
+          "label": "総資産額、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:NetAssetsSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "単体",
+          "label": "純資産額、経営指標等"
+        }
+      }
+    }
+  ]
+}

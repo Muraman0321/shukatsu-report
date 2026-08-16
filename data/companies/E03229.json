@@ -116,7 +116,7 @@
       "reporting_company": {
         "average_age_years": 37.5,
         "average_tenure_years": 12.2,
-        "average_annual_salary_yen": 530000000
+        "average_annual_salary_yen": null
       },
       "diversity": {
         "scope": null,
@@ -130,7 +130,8 @@
       "subsidiaries": [],
       "notes": [
         "多様性指標は有報に記載なし（非公表）。",
-        "提出会社の従業員数を有報PDFから確定できていない（要確認）。"
+        "提出会社の従業員数を有報PDFから確定できていない（要確認）。",
+        "平均年間給与を掲載しない：有価証券報告書のXBRLの値が 530,000,000 で、平均年間給与としてありえない範囲。提出企業のタグ付け誤りと考えられるため、推測で補わず非公表として扱う。"
       ],
       "is_holding": false,
       "basis_change_note": "",
@@ -160,7 +161,7 @@
       "reporting_company": {
         "average_age_years": 36.6,
         "average_tenure_years": 11.5,
-        "average_annual_salary_yen": 544200000
+        "average_annual_salary_yen": null
       },
       "diversity": {
         "scope": "提出会社",
@@ -173,7 +174,8 @@
       },
       "subsidiaries": [],
       "notes": [
-        "提出会社の従業員数を有報PDFから確定できていない（要確認）。"
+        "提出会社の従業員数を有報PDFから確定できていない（要確認）。",
+        "平均年間給与を掲載しない：有価証券報告書のXBRLの値が 544,200,000 で、平均年間給与としてありえない範囲。提出企業のタグ付け誤りと考えられるため、推測で補わず非公表として扱う。"
       ],
       "is_holding": false,
       "basis_change_note": "",
@@ -268,13 +270,25 @@
   ],
   "salary_breaks": {},
   "headcount_breaks": {},
+  "value_anomalies": [
+    {
+      "period_end": "2023-03-31",
+      "field": "average_annual_salary_yen",
+      "raw_value": 530000000,
+      "reason": "平均年間給与としてありえない範囲"
+    },
+    {
+      "period_end": "2024-03-31",
+      "field": "average_annual_salary_yen",
+      "raw_value": 544200000,
+      "reason": "平均年間給与としてありえない範囲"
+    }
+  ],
   "salary_trend_comparable": true,
   "headcount_trend_comparable": true,
   "trend": {
     "average_annual_salary_yen": {
       "2022-03-31": 5330000,
-      "2023-03-31": 530000000,
-      "2024-03-31": 544200000,
       "2025-03-31": 5360000,
       "2026-03-31": 5490000
     },

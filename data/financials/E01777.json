@@ -1,0 +1,396 @@
+{
+  "edinet_code": "E01777",
+  "name": "ソニーグループ株式会社",
+  "peer_group": "電気機器",
+  "is_holding": true,
+  "latest": {
+    "period_end": "2026-03-31",
+    "doc_id": "S100YE2C",
+    "accounting_standard": "IFRS",
+    "scope": "連結",
+    "revenue_label": "売上高（IFRS）",
+    "consolidated_employees": 94900,
+    "per_capita_denominator": 94900,
+    "per_capita_denominator_label": "連結従業員数",
+    "values": {
+      "revenue": 12479620000000.0,
+      "operating_income": 1447507000000.0,
+      "net_income": -326865000000.0,
+      "total_assets": 15683490000000.0,
+      "net_assets": 8119011000000.0,
+      "equity_ratio": 0.518
+    },
+    "per_capita": {
+      "revenue_per_employee": 131502845,
+      "operating_income_per_employee": 15252972
+    },
+    "provenance": {
+      "revenue": {
+        "element": "jpigp_cor:NetSalesIFRS",
+        "resolved_by": "拡張タグ",
+        "scope": "連結",
+        "label": "売上高（IFRS）"
+      },
+      "operating_income": {
+        "element": "jpigp_cor:OperatingProfitLossIFRS",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "営業利益（△損失）（IFRS）"
+      },
+      "net_income": {
+        "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+      },
+      "total_assets": {
+        "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "総資産額（IFRS）、経営指標等"
+      },
+      "net_assets": {
+        "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+      },
+      "equity_ratio": {
+        "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+        "resolved_by": "標準タグ",
+        "scope": "連結",
+        "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+      }
+    }
+  },
+  "years": [
+    {
+      "period_end": "2022-03-31",
+      "doc_id": "S100OJ0K",
+      "accounting_standard": "IFRS",
+      "scope": "連結",
+      "revenue_label": "売上高（IFRS）",
+      "consolidated_employees": 108900,
+      "per_capita_denominator": 108900,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 8396702000000.0,
+        "operating_income": 1202339000000.0,
+        "net_income": 882178000000.0,
+        "total_assets": 30480967000000.0,
+        "net_assets": 7144471000000.0,
+        "equity_ratio": 0.234,
+        "roe": 0.128
+      },
+      "per_capita": {
+        "revenue_per_employee": 77104702,
+        "operating_income_per_employee": 11040762
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpigp_cor:NetSalesIFRS",
+          "resolved_by": "拡張タグ",
+          "scope": "連結",
+          "label": "売上高（IFRS）"
+        },
+        "operating_income": {
+          "element": "jpigp_cor:OperatingProfitLossIFRS",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益（△損失）（IFRS）"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額（IFRS）、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分利益率（IFRS）、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2023-03-31",
+      "doc_id": "S100QZT6",
+      "accounting_standard": "IFRS",
+      "scope": "連結",
+      "revenue_label": "売上高（IFRS）",
+      "consolidated_employees": 113000,
+      "per_capita_denominator": 113000,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 10095841000000.0,
+        "operating_income": 1208206000000.0,
+        "net_income": 937126000000.0,
+        "total_assets": 32041222000000.0,
+        "net_assets": 7229709000000.0,
+        "equity_ratio": 0.226,
+        "roe": 0.13
+      },
+      "per_capita": {
+        "revenue_per_employee": 89343726,
+        "operating_income_per_employee": 10692088
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpigp_cor:NetSalesIFRS",
+          "resolved_by": "拡張タグ",
+          "scope": "連結",
+          "label": "売上高（IFRS）"
+        },
+        "operating_income": {
+          "element": "jpigp_cor:OperatingProfitLossIFRS",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益（△損失）（IFRS）"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額（IFRS）、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分利益率（IFRS）、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2024-03-31",
+      "doc_id": "S100TS7P",
+      "accounting_standard": "IFRS",
+      "scope": "連結",
+      "revenue_label": "売上高（IFRS）",
+      "consolidated_employees": 113000,
+      "per_capita_denominator": 113000,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 11260037000000.0,
+        "operating_income": 1208831000000.0,
+        "net_income": 970573000000.0,
+        "total_assets": 34107490000000.0,
+        "net_assets": 7587177000000.0,
+        "equity_ratio": 0.222,
+        "roe": 0.137
+      },
+      "per_capita": {
+        "revenue_per_employee": 99646345,
+        "operating_income_per_employee": 10697619
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpigp_cor:NetSalesIFRS",
+          "resolved_by": "拡張タグ",
+          "scope": "連結",
+          "label": "売上高（IFRS）"
+        },
+        "operating_income": {
+          "element": "jpigp_cor:OperatingProfitLossIFRS",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益（△損失）（IFRS）"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額（IFRS）、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分利益率（IFRS）、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2025-03-31",
+      "doc_id": "S100W19Q",
+      "accounting_standard": "IFRS",
+      "scope": "連結",
+      "revenue_label": "売上高（IFRS）",
+      "consolidated_employees": 112300,
+      "per_capita_denominator": 112300,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 12034917000000.0,
+        "operating_income": 1407163000000.0,
+        "net_income": 1141600000000.0,
+        "total_assets": 35293173000000.0,
+        "net_assets": 8179745000000.0,
+        "equity_ratio": 0.232,
+        "roe": 0.145
+      },
+      "per_capita": {
+        "revenue_per_employee": 107167560,
+        "operating_income_per_employee": 12530392
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpigp_cor:NetSalesIFRS",
+          "resolved_by": "拡張タグ",
+          "scope": "連結",
+          "label": "売上高（IFRS）"
+        },
+        "operating_income": {
+          "element": "jpigp_cor:OperatingProfitLossIFRS",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益（△損失）（IFRS）"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額（IFRS）、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+        },
+        "roe": {
+          "element": "jpcrp_cor:RateOfReturnOnEquityIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分利益率（IFRS）、経営指標等"
+        }
+      }
+    },
+    {
+      "period_end": "2026-03-31",
+      "doc_id": "S100YE2C",
+      "accounting_standard": "IFRS",
+      "scope": "連結",
+      "revenue_label": "売上高（IFRS）",
+      "consolidated_employees": 94900,
+      "per_capita_denominator": 94900,
+      "per_capita_denominator_label": "連結従業員数",
+      "values": {
+        "revenue": 12479620000000.0,
+        "operating_income": 1447507000000.0,
+        "net_income": -326865000000.0,
+        "total_assets": 15683490000000.0,
+        "net_assets": 8119011000000.0,
+        "equity_ratio": 0.518
+      },
+      "per_capita": {
+        "revenue_per_employee": 131502845,
+        "operating_income_per_employee": 15252972
+      },
+      "provenance": {
+        "revenue": {
+          "element": "jpigp_cor:NetSalesIFRS",
+          "resolved_by": "拡張タグ",
+          "scope": "連結",
+          "label": "売上高（IFRS）"
+        },
+        "operating_income": {
+          "element": "jpigp_cor:OperatingProfitLossIFRS",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "営業利益（△損失）（IFRS）"
+        },
+        "net_income": {
+          "element": "jpcrp_cor:ProfitLossAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "当期利益又は当期損失（△）：親会社の所有者に帰属（IFRS）、経営指標等"
+        },
+        "total_assets": {
+          "element": "jpcrp_cor:TotalAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "総資産額（IFRS）、経営指標等"
+        },
+        "net_assets": {
+          "element": "jpcrp_cor:EquityAttributableToOwnersOfParentIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社の所有者に帰属する持分（IFRS）、経営指標等"
+        },
+        "equity_ratio": {
+          "element": "jpcrp_cor:RatioOfOwnersEquityToGrossAssetsIFRSSummaryOfBusinessResults",
+          "resolved_by": "標準タグ",
+          "scope": "連結",
+          "label": "親会社所有者帰属持分比率（IFRS）、経営指標等"
+        }
+      }
+    }
+  ]
+}
