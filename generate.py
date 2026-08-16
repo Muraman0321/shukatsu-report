@@ -37,9 +37,11 @@ import math
 import os
 import shutil
 import sys
+import urllib.parse
 from pathlib import Path
 
 import rankings
+import shindan
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "companies"
@@ -231,16 +233,26 @@ def load() -> tuple[list[dict], str]:
     companies = [json.loads(p.read_text(encoding="utf-8")) for p in sorted(DATA.glob("*.json"))]
     fin = rankings.load_financials()
     ovs = rankings.load_overseas()
+    # 公式サイト・採用ページ（fetch_links.py が作る）。無くてもサイトは成立する
+    links_path = ROOT / "data" / "company_links.json"
+    links = json.loads(links_path.read_text(encoding="utf-8")) if links_path.exists() else {}
     for c in companies:
         c["slug"] = slug_of(c)
         c["short"] = short_name(c["name"])
+        # ロゴ表示用のドメイン。手で用意した154社ぶんを優先し、無ければ
+        # 法人番号で特定した公式サイトのホストを使う（154社 → 1,383社に増える）
         c["domain"] = domains.get(c["edinet_code"])
+        if not c["domain"]:
+            off = (links.get(c["edinet_code"]) or {}).get("official")
+            if off:
+                c["domain"] = urllib.parse.urlsplit(off).netloc.removeprefix("www.")
         pp = PROSE / f"{c['edinet_code']}.json"
         c["prose"] = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
         # 財務（extract_financials.py の出力）。無い会社・無い項目は素通しし、
         # 「あれば載せる」扱いにする。財務が1社も無くてもサイトは成立する
         c["fin"] = fin.get(c["edinet_code"])
         c["overseas"] = ovs.get(c["edinet_code"])
+        c["links"] = links.get(c["edinet_code"]) or {}
     idx = ROOT / "data" / "doc_index.csv"
     fetched = dt.date.fromtimestamp(idx.stat().st_mtime).isoformat()
     return companies, fetched
@@ -287,7 +299,7 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
   <span class="tagline">{e(TAGLINE)}</span>
-  <nav class="header-nav"><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
+  <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
   {search_box("header")}
 </header>
 <main>
@@ -593,6 +605,36 @@ def size_band(c: dict) -> tuple[int, str]:
     return (-1, "従業員数が非公表")
 
 
+def external_links(c: dict) -> str:
+    """公式サイトと採用ページへの導線。
+
+    **このサイトで唯一、有価証券報告書以外を出典にする箇所。** ただし出しているのは
+    数値ではなくリンクである。公式サイトは法人番号（国が振った一意な識別子）で
+    Wikidata を引いて特定しており、社名の表記ゆれで別会社に飛ぶ余地を消してある。
+    採用ページは公式トップのリンクから辿った結果で、見つからなければ黙って出さない。
+    """
+    L = c.get("links") or {}
+    if not L.get("official"):
+        return ""
+    host = urllib.parse.urlsplit(L["official"]).netloc
+    items = [
+        f'<a class="extlink" href="{e(L["official"])}" rel="nofollow noopener" target="_blank">'
+        f'{logo_img(host)}公式サイト <small>{e(host)}</small></a>'
+    ]
+    if L.get("recruit"):
+        items.append(
+            f'<a class="extlink is-recruit" href="{e(L["recruit"])}" rel="nofollow noopener" target="_blank">'
+            f'採用ページ <small>{e(urllib.parse.urlsplit(L["recruit"]).netloc)}</small></a>'
+        )
+    note = (
+        "" if L.get("recruit") else
+        '<p class="caveat">採用ページのリンクは、公式サイトのトップから辿れたときだけ載せています。'
+        "この会社では見つけられませんでした（トップの案内がJavaScriptで描かれている、"
+        "robots.txt で対象外、などの理由）。推測のURLは載せません。</p>"
+    )
+    return f'<div class="extlinks">{"".join(items)}</div>{note}'
+
+
 def oku(v) -> str:
     """億円表示。桁が大きい財務値を就活生が読める単位に落とす。"""
     if v is None:
@@ -867,6 +909,7 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 
 <h1>{logo_img(c["domain"], size=28)}{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
 <p class="lead">有価証券報告書（{e(period)}期）から機械的に抽出した数値です。業種：{e(c["industry"])}／証券コード {e(c["sec_code"][:4])}</p>
+{external_links(c)}
 
 {stale_note(c, newest)}
 {holding_warning(c)}
@@ -1248,6 +1291,14 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
 数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社・計{sum(len(c["years"]) for c in companies)}件の有価証券報告書）。
 AIに数字を書かせていません。データが無い項目は推測で埋めず「非公表」と書きます。
 </p>
+<section class="hero-cta">
+<h2>何を優先するかで、合う会社は変わる</h2>
+<p>12問の二者択一に答えると、<b>自分が就活で何を大事にしているか</b>が8つの軸で出ます。
+そのうえで同じ重みを使って{len(companies)}社を並べ替えます。回答はブラウザの中だけで処理され、どこにも送信されません。</p>
+<p><a class="cta-btn" href="shindan.html">就活の軸診断をやってみる</a></p>
+<p class="caveat">性格診断ではありません。有価証券報告書の数値を、あなたが選んだ重みで並べ替えているだけです。</p>
+</section>
+
 <section>
 <h2>ランキングと条件で探す</h2>
 <p>業界をまたいで並べたり、条件で絞り込んだりできます。掲載企業から広告費を受け取っていないので、企業に不利な順位もそのまま出します。</p>
@@ -1297,12 +1348,45 @@ CSS = """:root{
   --warn:#fdf6ec;--warnline:#c98a2b;--note:#eef1fc;
   --up:#0f8a5f;--down:#c53434;
   --shadow:0 1px 2px rgba(18,20,31,.04),0 8px 24px rgba(18,20,31,.06);
-  --radius:12px;--radius-sm:8px
+  --shadow-lift:0 2px 6px rgba(18,20,31,.06),0 18px 44px rgba(18,20,31,.10);
+  --radius:12px;--radius-sm:8px;
+  /* 動きの基準を1か所に集める。ばらばらの秒数を各所に書くと「ぬるぬる」ではなく雑味になる */
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --t-fast:.16s;--t:.28s;--t-slow:.55s
 }
 *{box-sizing:border-box}
+html{scroll-behavior:smooth}
+a,button,input,select,.card,.linklist li,.grid tbody tr{transition:color var(--t-fast) var(--ease),background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t) var(--ease),transform var(--t) var(--ease-out)}
+
+/* スクロールで現れる。**html.js-anim が付いているときだけ隠す。**
+   JSが落ちた・実行されない環境では .reveal は何もしないので、本文は必ず読める。
+   装飾のためにコンテンツが消えることがあってはならない。 */
+.reveal{transition:opacity var(--t-slow) var(--ease-out),transform var(--t-slow) var(--ease-out)}
+html.js-anim .reveal{opacity:0;transform:translateY(14px)}
+html.js-anim .reveal.is-in{opacity:1;transform:none}
+
+/* 読了バー（ページ上端） */
+.read-bar{position:fixed;top:0;left:0;height:2px;width:100%;background:linear-gradient(90deg,var(--accent),#6f8bff);transform:scaleX(0);transform-origin:0 50%;z-index:60;pointer-events:none;will-change:transform}
+
+/* 動きを減らす設定の人には動かさない。装飾のために読みづらくしない */
+@media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+  .reveal{opacity:1;transform:none}
+  .read-bar{display:none}
+}
 body{margin:0;font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,system-ui,sans-serif;color:var(--fg);background:var(--bg);line-height:1.75;font-size:16px;-webkit-font-smoothing:antialiased;letter-spacing:.01em}
 main{max-width:960px;margin:0 auto;padding:0 20px 64px}
-header.site{background:linear-gradient(120deg,#10122a 0%,#1d2864 100%)}
+header.site{background:linear-gradient(120deg,#10122a 0%,#1d2864 100%);position:sticky;top:0;z-index:50;transition:padding var(--t) var(--ease),box-shadow var(--t) var(--ease)}
+/* スクロールすると縮んで影が出る。タグラインと検索は畳んで、戻る導線だけ残す */
+header.site.is-stuck{box-shadow:0 6px 24px rgba(16,18,42,.28)}
+header.site.is-stuck .brand{padding-top:12px}
+header.site.is-stuck .brand-word{font-size:20px}
+header.site.is-stuck .tagline{max-height:0;opacity:0;padding:0;overflow:hidden}
+header.site.is-stuck .site-search{max-height:0;opacity:0;padding-bottom:0;overflow:hidden}
+header.site.is-stuck .header-nav{padding-bottom:10px}
+header.site .tagline,header.site .site-search,header.site .brand,header.site .brand-word{transition:all var(--t) var(--ease)}
 header.site>*{max-width:960px;margin:0 auto;padding:0 20px}
 .brand{display:flex;align-items:center;gap:10px;padding-top:24px;text-decoration:none}
 .brand svg{flex:none}
@@ -1367,6 +1451,77 @@ table{border-collapse:collapse;width:100%}
 .linklist li{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px}
 .linklist li a{font-weight:700}
 .linklist li .small{display:block;color:var(--mut);margin-top:3px}
+.linklist li{position:relative;overflow:hidden}
+.linklist li:hover{transform:translateY(-2px);box-shadow:var(--shadow-lift);border-color:#c9d2ee}
+.linklist li::after{content:"→";position:absolute;right:14px;top:50%;transform:translate(6px,-50%);opacity:0;color:var(--accent);font-weight:800;transition:opacity var(--t) var(--ease),transform var(--t) var(--ease-out)}
+.linklist li:hover::after{opacity:1;transform:translate(0,-50%)}
+
+/* ---- 会社ページ・一覧の手ざわり ---- */
+.card{transition:transform var(--t) var(--ease-out),box-shadow var(--t) var(--ease)}
+.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+.grid tbody tr:hover{background:#f4f7ff}
+.grid tbody th a{background-image:linear-gradient(var(--accent),var(--accent));background-size:0 1.5px;background-position:0 100%;background-repeat:no-repeat;transition:background-size var(--t) var(--ease)}
+.grid tbody th a:hover{background-size:100% 1.5px}
+.cta-btn,.sd-start{appearance:none;border:0;cursor:pointer;font:inherit;font-weight:800;color:#fff;background:linear-gradient(120deg,var(--accent),#5570e6);padding:14px 30px;border-radius:999px;box-shadow:0 6px 18px rgba(47,75,214,.28)}
+.cta-btn:hover,.sd-start:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(47,75,214,.36)}
+.cta-btn:active,.sd-start:active{transform:translateY(0)}
+
+/* ---- 就活の軸診断 ---- */
+.shindan{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:26px 22px;box-shadow:var(--shadow);margin:22px 0}
+.sd-intro{text-align:center}
+.sd-meta{color:var(--mut);font-size:13px;margin:0 0 18px}
+.sd-progress{height:4px;background:var(--line);border-radius:999px;overflow:hidden}
+.sd-bar{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#6f8bff);transition:width var(--t-slow) var(--ease-out)}
+.sd-count{color:var(--mut);font-size:13px;margin:10px 0 2px;text-align:center}
+.sd-count b{color:var(--accent-dk);font-size:19px}
+.sd-lead{text-align:center;font-weight:700;margin:0 0 16px}
+.sd-choices{display:grid;grid-template-columns:1fr auto 1fr;gap:12px;align-items:stretch}
+.sd-vs{align-self:center;color:var(--mut);font-size:13px}
+.sd-choice{appearance:none;cursor:pointer;font:inherit;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);padding:22px 18px;font-weight:700;line-height:1.6;min-height:110px;display:flex;align-items:center}
+.sd-choice:hover{border-color:var(--accent);background:#f7f9ff;transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+.sd-choice:active{transform:scale(.985)}
+.sd-back{appearance:none;border:0;background:none;cursor:pointer;font:inherit;color:var(--mut);font-size:13px;margin-top:16px;padding:6px 0}
+.sd-back:hover{color:var(--accent)}
+@keyframes sdInL{from{opacity:0;transform:translateX(22px)}to{opacity:1;transform:none}}
+@keyframes sdInR{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:none}}
+.sd-choices.in-l{animation:sdInL .34s var(--ease-out) both}
+.sd-choices.in-r{animation:sdInR .34s var(--ease-out) both}
+
+.sd-axis{display:grid;grid-template-columns:9.5em 1fr 3.2em;gap:10px;align-items:center;margin:8px 0;animation:sdRow .45s var(--ease-out) both;animation-delay:calc(var(--i) * .05s)}
+@keyframes sdRow{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.sd-axis-name{font-weight:700;font-size:14px}
+.sd-axis-bar{background:var(--line);border-radius:999px;height:10px;overflow:hidden}
+.sd-axis-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#6f8bff);border-radius:999px;animation:sdGrow .7s var(--ease-out) both;animation-delay:calc(var(--i) * .05s + .1s)}
+@keyframes sdGrow{from{width:0!important}}
+.sd-axis-val{color:var(--mut);font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+.sd-filters{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:0 0 12px;font-size:13.5px;color:var(--mut)}
+.sd-filters select{font:inherit;padding:5px 9px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--fg)}
+.sd-table tbody tr{animation:sdRow .4s var(--ease-out) both;animation-delay:calc(var(--i) * .022s)}
+.sd-score{display:inline-block;vertical-align:middle;width:52px;height:7px;background:var(--line);border-radius:999px;overflow:hidden;margin-right:7px}
+.sd-score i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),#6f8bff)}
+.sd-why{display:inline-block;font-size:11px;background:var(--note);color:var(--accent-dk);border-radius:5px;padding:2px 7px;margin:1px 3px 1px 0;font-weight:700;white-space:nowrap}
+.sd-used{display:block;color:var(--mut);font-size:11px}
+.sd-actions{margin-top:18px}
+.sd-retry{appearance:none;cursor:pointer;font:inherit;font-weight:700;color:var(--accent-dk);background:var(--note);border:1px solid #d7ddf7;border-radius:999px;padding:9px 22px}
+.sd-retry:hover{background:#e4e9fb}
+@media(max-width:640px){
+  .sd-choices{grid-template-columns:1fr;gap:10px}
+  .sd-vs{justify-self:center}
+  .sd-choice{min-height:76px;padding:16px 15px}
+  .sd-axis{grid-template-columns:7.5em 1fr 3em}
+}
+
+/* ---- 公式サイト・採用ページへの導線 ---- */
+.extlinks{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+.extlink{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:700;text-decoration:none;color:var(--fg)}
+.extlink:hover{border-color:var(--accent);color:var(--accent-dk);transform:translateY(-2px);box-shadow:var(--shadow)}
+.extlink.is-recruit{background:var(--note);border-color:#d7ddf7;color:var(--accent-dk)}
+.extlink small{font-weight:400;color:var(--mut)}
+.hero-cta{background:linear-gradient(140deg,#f4f6ff 0%,#eef1fc 60%,#f7f4ff 100%);border:1px solid #dfe4f6;border-radius:var(--radius);padding:28px 24px;text-align:center;margin:26px 0}
+.hero-cta h2{border:0;margin:0 0 8px;font-size:20px}
+.hero-cta p{margin:0 0 14px}
+.hero-cta .caveat{margin:12px 0 0}
+.header-nav a{margin-right:16px}
 .hd{font-size:10px;background:#eef1fc;color:var(--accent-dk);padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .stale{font-size:10px;background:var(--warn);color:#8a5c14;padding:2px 7px;border-radius:4px;vertical-align:middle;font-weight:700}
 .method{font-size:10px;padding:2px 7px;border-radius:4px;white-space:nowrap;font-weight:700}
@@ -1660,9 +1815,205 @@ APP_JS = r"""(function () {
     });
   }
 
+  // ---- 就活の軸診断（shindan.html でのみ動く） ----
+  // 回答はどこにも送らない。fetch するのは自サイトの静的JSONだけ。
+  function initShindan() {
+    var root = document.getElementById("shindan");
+    if (!root) return;
+
+    var D = null, qi = 0, answers = [];
+    var elQuiz = root.querySelector(".sd-quiz");
+    var elIntro = root.querySelector(".sd-intro");
+    var elRes = root.querySelector(".sd-result");
+    var btns = root.querySelectorAll(".sd-choice");
+    var back = root.querySelector(".sd-back");
+
+    function show(sec) {
+      [elIntro, elQuiz, elRes].forEach(function (s) { s.hidden = s !== sec; });
+      root.setAttribute("data-state", sec === elIntro ? "intro" : sec === elQuiz ? "quiz" : "result");
+      if (sec !== elIntro) sec.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function paintQuestion(dir) {
+      var q = D.questions[qi];
+      root.querySelector(".sd-no").textContent = qi + 1;
+      root.querySelector(".sd-bar").style.width = ((qi) / D.questions.length * 100) + "%";
+      btns[0].querySelector("span").textContent = q.at;
+      btns[1].querySelector("span").textContent = q.bt;
+      back.hidden = qi === 0;
+      var wrap = root.querySelector(".sd-choices");
+      wrap.classList.remove("in-l", "in-r");
+      void wrap.offsetWidth;                       // アニメーションを再生させるための強制リフロー
+      wrap.classList.add(dir === "back" ? "in-r" : "in-l");
+    }
+
+    function answer(side) {
+      answers[qi] = side;
+      qi++;
+      if (qi >= D.questions.length) { result(); return; }
+      paintQuestion();
+    }
+
+    function weights() {
+      var w = {};
+      D.axes.forEach(function (a) { w[a.key] = 0; });
+      answers.forEach(function (side, i) {
+        var q = D.questions[i];
+        w[side === "a" ? q.a : q.b] += 1;
+      });
+      return w;
+    }
+
+    var FMT = {
+      pay: function (v) { return manYen(v); },
+      tenure: function (v) { return v.toFixed(1) + "年"; },
+      women: pct1, wagegap: pct1, global: pct1, stability: pct1,
+      scale: function (v) { return num0(v, "人"); },
+      growth: function (v) { return (v * 100 >= 0 ? "+" : "") + (v * 100).toFixed(1) + "%"; }
+    };
+
+    function result() {
+      root.querySelector(".sd-bar").style.width = "100%";
+      var w = weights();
+      var axes = D.axes.slice().sort(function (a, b) { return w[b.key] - w[a.key]; });
+      var maxw = Math.max.apply(null, D.axes.map(function (a) { return w[a.key]; })) || 1;
+
+      root.querySelector(".sd-axes").innerHTML = axes.map(function (a, i) {
+        var pctw = Math.round(w[a.key] / maxw * 100);
+        return '<div class="sd-axis" style="--i:' + i + '">' +
+          '<span class="sd-axis-name">' + esc(a.label) + "</span>" +
+          '<span class="sd-axis-bar"><i style="width:' + pctw + '%"></i></span>' +
+          '<span class="sd-axis-val">' + w[a.key] + "/3</span></div>";
+      }).join("");
+
+      var top = axes.filter(function (a) { return w[a.key] > 0; }).slice(0, 3)
+        .map(function (a) { return a.label; });
+      var zero = axes.filter(function (a) { return w[a.key] === 0; }).map(function (a) { return a.label; });
+      root.querySelector(".sd-axes-note").innerHTML =
+        "12問のうち、あなたが選んだ回数です。上位は<b>" + esc(top.join("・")) + "</b>。" +
+        (zero.length ? "一度も選ばなかったのは" + esc(zero.join("・")) + "でした。" : "") +
+        "この重みで下の順位を出しています。";
+
+      var sel = root.querySelector(".sd-group");
+      if (sel.options.length <= 1) {
+        var groups = {};
+        D.companies.forEach(function (c) { groups[c.g] = 1; });
+        Object.keys(groups).sort().forEach(function (g) {
+          var o = document.createElement("option"); o.value = g; o.textContent = g; sel.appendChild(o);
+        });
+      }
+      renderTable(w);
+      show(elRes);
+    }
+
+    function renderTable(w) {
+      var noHd = root.querySelector(".sd-nohd").checked;
+      var group = root.querySelector(".sd-group").value;
+      var keys = D.axes.map(function (a) { return a.key; }).filter(function (k) { return w[k] > 0; });
+      var labelOf = {}; D.axes.forEach(function (a) { labelOf[a.key] = a.short; });
+
+      var rows = D.companies.filter(function (c) {
+        if (noHd && c.h) return false;
+        if (group && c.g !== group) return false;
+        return keys.some(function (k) { return c.p[k] !== undefined; });
+      }).map(function (c) {
+        var sum = 0, wsum = 0, used = [];
+        keys.forEach(function (k) {
+          if (c.p[k] === undefined) return;        // 欠損は平均で埋めず、その軸を外す
+          sum += c.p[k] * w[k]; wsum += w[k]; used.push(k);
+        });
+        var score = wsum ? sum / wsum : 0;
+        // 「なぜ上位なのか」＝重み×順位が大きい軸を2つ出す
+        var why = used.slice().sort(function (a, b) { return c.p[b] * w[b] - c.p[a] * w[a]; }).slice(0, 2);
+        return { c: c, score: score, used: used.length, why: why };
+      }).sort(function (a, b) { return b.score - a.score; }).slice(0, 50);
+
+      root.querySelector(".sd-table tbody").innerHTML = rows.map(function (r, i) {
+        var why = r.why.map(function (k) {
+          var v = r.c.v[k];
+          var t = (FMT[k] && typeof v === "number") ? FMT[k](v) : "";
+          return '<span class="sd-why">' + esc(labelOf[k]) + (t ? " " + esc(t) : "") + "</span>";
+        }).join(" ");
+        return '<tr style="--i:' + i + '"><td class="rank-no">' + (i + 1) + "</td>" +
+          '<th scope="row"><a href="' + base + "kigyou/" + esc(r.c.s) + '.html">' + esc(r.c.n) + "</a></th>" +
+          '<td><span class="sd-score"><i style="width:' + Math.round(r.score * 100) + '%"></i></span>' +
+          Math.round(r.score * 100) + "</td>" +
+          "<td>" + why + '<span class="sd-used">' + r.used + "軸で評価</span></td>" +
+          '<td class="small">' + esc(r.c.g) + "</td></tr>";
+      }).join("");
+    }
+
+    root.querySelector(".sd-start").addEventListener("click", function () {
+      fetch(base + "data/shindan.json").then(function (r) { return r.json(); }).then(function (d) {
+        D = d; qi = 0; answers = []; show(elQuiz); paintQuestion();
+      });
+    });
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () { answer(b.getAttribute("data-side")); });
+    });
+    back.addEventListener("click", function () { if (qi > 0) { qi--; paintQuestion("back"); } });
+    root.querySelector(".sd-retry").addEventListener("click", function () {
+      qi = 0; answers = []; show(elQuiz); paintQuestion();
+    });
+    root.querySelector(".sd-nohd").addEventListener("change", function () { renderTable(weights()); });
+    root.querySelector(".sd-group").addEventListener("change", function () { renderTable(weights()); });
+  }
+
+  // ---- スクロールで現れる（見えたときに一度だけ） ----
+  // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
+  // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
+  // 一定時間後に必ず全部を表示する安全網を置く。本文が読めないほうが害が大きい。
+  function initReveal() {
+    if (!("IntersectionObserver" in window)) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    var targets = document.querySelectorAll("main section, main .cards, main .scroll, main h1, main .lead");
+    if (!targets.length) return;
+    var root = document.documentElement;
+    root.classList.add("js-anim");
+    var fired = false;
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) { fired = true; en.target.classList.add("is-in"); io.unobserve(en.target); }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.02 });
+    targets.forEach(function (t) { t.classList.add("reveal"); io.observe(t); });
+    // 2.5秒たっても1つも現れていなければ Observer が働いていない。全部表示に倒す
+    setTimeout(function () {
+      if (fired) return;
+      root.classList.remove("js-anim");
+      targets.forEach(function (t) { t.classList.add("is-in"); });
+      io.disconnect();
+    }, 2500);
+  }
+
+  // ---- ヘッダーを縮める・読了バー ----
+  function initChrome() {
+    var head = document.querySelector("header.site");
+    var bar = document.createElement("div");
+    bar.className = "read-bar";
+    document.body.appendChild(bar);
+    var ticking = false;
+    function onScroll() {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = window.pageYOffset || document.documentElement.scrollTop;
+        if (head) head.classList.toggle("is-stuck", y > 12);
+        var h = document.documentElement.scrollHeight - window.innerHeight;
+        bar.style.transform = "scaleX(" + (h > 0 ? Math.min(1, y / h) : 0) + ")";
+        ticking = false;
+      });
+    }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSearch();
     initCompare();
+    initShindan();
+    initReveal();
+    initChrome();
   });
 })();
 """
@@ -1700,6 +2051,10 @@ def main() -> None:
         urls += rankings.build(sys.modules[__name__], companies, fetched, SITE)
     except Exception as exc:  # noqa: BLE001 — 商品である企業ページの生成を止めないための握り
         print(f"  !! ランキングの生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
+    try:
+        urls += shindan.build(sys.modules[__name__], companies, fetched, SITE)
+    except Exception as exc:  # noqa: BLE001 — 同上
+        print(f"  !! 診断の生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
 
     for g, members in groups.items():
         path = f"/gyoukai/{GROUP_SLUG.get(g, g)}.html"
