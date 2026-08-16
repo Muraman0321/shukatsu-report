@@ -799,7 +799,20 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
   {line_chart(c["trend"].get("female_to_male_wage_ratio_all", {}), lambda v: pct(v))}
 </div>"""
 
-    notes = L.get("notes") or []
+    notes = list(L.get("notes") or [])
+    # 落とした値は最新期とは限らない（荏原製作所は2024年12月期だけ）。
+    # 推移の折れ線がその年だけ欠けるので、どの期をなぜ落としたかを必ず書く
+    for a in c.get("value_anomalies") or []:
+        label = {"average_annual_salary_yen": "平均年間給与",
+                 "average_age_years": "平均年齢",
+                 "average_tenure_years": "平均勤続年数"}.get(a["field"], a["field"])
+        notes.append(
+            f'{a["period_end"][:7]}期の{label}を掲載していません。'
+            f'有価証券報告書のXBRLに記載された値が {a["raw_value"]:,} で、{a["reason"]}ためです。'
+            "提出企業のタグ付け誤りと考えられますが、正しい値を推測で置くことはしません。"
+            "原典（下の出典欄のEDINET）で確認してください。"
+        )
+    notes = list(dict.fromkeys(notes))
     notes_html = ""
     if notes:
         items = "".join(f"<li>{e(n)}</li>" for n in notes)
