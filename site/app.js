@@ -362,23 +362,39 @@
   // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
   // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
   // 一定時間後に必ず全部を表示する安全網を置く。本文が読めないほうが害が大きい。
+  //
+  // threshold は必ず 0 にする。**割合で指定すると背の高い要素が永久に隠れる。**
+  // トップページの掲載企業欄は高さ7万pxあり、threshold 0.02 は「1,400px以上見えたら」
+  // という意味になって、画面の高さを超えるため一度も満たされなかった。
+  // 同じ理由で、画面より背の高い要素はそもそも隠さない（現れる演出の意味もない）。
   function initReveal() {
     if (!("IntersectionObserver" in window)) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    var targets = document.querySelectorAll("main section, main .cards, main .scroll, main h1, main .lead");
+    var all = document.querySelectorAll("main section, main .scroll, main h1, main .lead");
+    if (!all.length) return;
+    var vh = window.innerHeight || 800;
+    var targets = [];
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].getBoundingClientRect().height <= vh * 1.5) targets.push(all[i]);
+    }
     if (!targets.length) return;
     var root = document.documentElement;
     root.classList.add("js-anim");
-    var fired = false;
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) {
-        if (en.isIntersecting) { fired = true; en.target.classList.add("is-in"); io.unobserve(en.target); }
+        if (en.isIntersecting) { en.target.classList.add("is-in"); io.unobserve(en.target); }
       });
-    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.02 });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0 });
     targets.forEach(function (t) { t.classList.add("reveal"); io.observe(t); });
-    // 2.5秒たっても1つも現れていなければ Observer が働いていない。全部表示に倒す
+    // 安全網。2.5秒後、まだ隠れたままで画面内に入っている要素は Observer が
+    // 働いていないということなので表示に倒す（1つでも発火していれば、で判定しない。
+    // 上部だけ発火して下が永久に隠れる、という今回の壊れ方を検出できないため）
     setTimeout(function () {
-      if (fired) return;
+      var stuck = targets.filter(function (t) {
+        var r = t.getBoundingClientRect();
+        return !t.classList.contains("is-in") && r.top < vh && r.bottom > 0;
+      });
+      if (!stuck.length) return;
       root.classList.remove("js-anim");
       targets.forEach(function (t) { t.classList.add("is-in"); });
       io.disconnect();
