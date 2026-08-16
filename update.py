@@ -69,13 +69,21 @@ def snapshot() -> dict[str, dict]:
 
 
 def latest_on_site() -> dict[str, str]:
-    """会社ごとに、いまサイトが持っている最新の決算期を返す。"""
+    """会社ごとに、いま取り込み済みの最新の決算期を返す。
+
+    **平均年間給与の有無で判定してはいけない。** 最初その実装にして、23社が
+    毎回「未取り込み」に出続けた。持株会社には平均年間給与が載らないものがあり、
+    加藤製作所・ヨロズのようにあり得ない値として除去した期もある。給与を基準に
+    すると、それらの期は永久に「まだ入っていない」ことになり、取り込んでも消えない。
+
+    見るべきは給与ではなく、**その書類を読んだかどうか**（years に入っているか）。
+    """
     out: dict[str, str] = {}
     for p in (ROOT / "data" / "companies").glob("*.json"):
         d = json.loads(p.read_text(encoding="utf-8"))
-        periods = sorted(d["trend"]["average_annual_salary_yen"])
+        periods = [y["source"]["period_end"] for y in d["years"] if y.get("source")]
         if periods:
-            out[d["edinet_code"]] = periods[-1]
+            out[d["edinet_code"]] = max(periods)
     return out
 
 
