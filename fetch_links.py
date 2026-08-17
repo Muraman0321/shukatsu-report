@@ -1,7 +1,8 @@
-"""各社の公式サイトと採用ページのURLを集める。**有報以外の情報源を使う唯一の場所。**
+"""各社の公式サイトと採用ページのURL、ロゴ用アイコンを集める。**有報以外の情報源を使う唯一の場所。**
 
 数値は有価証券報告書だけを出典にするという原則は変えない。ここで集めるのは
-「どこを見に行けばよいか」というリンクであって、サイトに表示する数値ではない。
+「どこを見に行けばよいか」というリンクと、表示用のアイコンURLであって、
+サイトに表示する数値ではない。
 
 ## 手順と、その選び方の理由
 
@@ -9,16 +10,22 @@
    法人番号は国が振った一意な識別子なので、社名の表記ゆれ（「株式会社　ヤマウラ」の全角空白、
    旧社名、同名他社）で取り違える余地が無い。社名で当てにいくと必ず事故る。
 
-2. **採用ページ** … 公式サイトのトップを **1回だけ** 取得し、その中のリンクから
-   採用ページを探す。`/recruit/` `/saiyo/` のようなパスの当てずっぽうはしない。
+2. **採用ページとロゴアイコン** … 公式サイトのトップを **1回だけ** 取得し、その中の
+   リンクから採用ページと `<link rel="icon"|"apple-touch-icon">` を探す（同じ1回の
+   取得を使い回す）。`/recruit/` `/saiyo/` のようなパスの当てずっぽうはしない。
    理由は2つある。(a) 当てずっぽうは1社あたり何回も他社サーバーを叩くうえ、
    採用サイトを別ドメイン（saiyo-*.jp など）に置く会社を取りこぼす。
    (b) トップページから辿るのは人間がやることと同じで、リンクの存在自体が根拠になる。
+   アイコンは同一オリジンのものしか使わない（robots.txtの確認が1回分しか無いため）。
+   Googleのfavicon代行は使わない。ドメインによってはリクエストサイズに関わらず
+   16x16固定で返ってくることを確認しており、拡大表示すると必ず粗くなるため。
+   見つからない・粗すぎる企業には generate.py 側で社名頭文字の代替マークを出す。
 
 3. **robots.txt を必ず読み、Disallow なら取りに行かない。** 弾かれたら
    User-Agent を偽装せず、その会社を対象から外す。これはこのプロジェクトの原則である。
 
-4. アクセスは **1ホストあたり1秒以上あける**。取得済みはキャッシュして再取得しない。
+4. アクセスは **1ホストあたり1秒以上あける**。既に完了している会社は再取得しない
+   （採用ページ・アイコンとも判明済みの会社のみ。一時的な失敗は次回また試す）。
 
 使い方:
     python fetch_links.py wikidata          # 法人番号 → 公式サイト（data/links/official.json）
@@ -154,7 +161,19 @@ def robots_allows(sess: requests.Session, origin: str, path: str = "/") -> bool 
 
 HREF_HINT = re.compile(r"recruit|saiyo|career|job|entry|shinsotsu", re.I)
 DATED_URL = re.compile(r"/20[0-9]{2}/")     # 年度版の採用サイト（住友商事の /2022/ など）
-FALLBACK_PATHS = ["/recruit/", "/saiyo/", "/careers/"]
+FALLBACK_PATHS = [
+    "/recruit/", "/saiyo/", "/careers/", "/career/",
+    "/recruit/index.html", "/saiyo/index.html",
+    "/company/recruit/", "/company/saiyo/", "/recruit/shinsotsu/", "/employment/",
+]
+
+# ロゴ用アイコン。宣言されている中で最も高解像度そうなものを選ぶ。
+# apple-touch-icon は伝統的favicon.ico（16x16）よりほぼ必ず大きい（120px以上が多い）ので優遇し、
+# SVGは拡大しても粗くならないので最優遇する。sizes="180x180" のような指定があれば数値を加点にする。
+ICON_LINK = re.compile(r"<link\b([^>]*)>", re.I)
+ICON_REL_HINT = re.compile(r"\bicon\b", re.I)
+ICON_SIZE = re.compile(r'sizes=["\']?(\d+)x\d+', re.I)
+FALLBACK_ICON_PATHS = ["/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"]
 
 
 def pick_recruit_link(html: str, base: str) -> tuple[str, str] | None:
@@ -197,6 +216,73 @@ def pick_recruit_link(html: str, base: str) -> tuple[str, str] | None:
     return (best[1], best[2]) if best else None
 
 
+def pick_icon_link(html: str, base: str) -> str | None:
+    """トップページのHTML（採用ページ探しで既に取得済みのもの）から、ロゴ用に
+    一番きれいそうなアイコンのURLを1つ選ぶ。favicon.ico（16x16のことが多い）より
+    apple-touch-icon（120px以上のことが多い）を優先し、SVGは常に最優遇する。
+    """
+    best: tuple[int, str] | None = None
+    for m in ICON_LINK.finditer(html):
+        attrs = m.group(1)
+        rel_m = re.search(r'rel=["\']([^"\']+)["\']', attrs, re.I)
+        href_m = re.search(r'href=["\']([^"\']+)["\']', attrs, re.I)
+        if not rel_m or not href_m or not ICON_REL_HINT.search(rel_m.group(1)):
+            continue
+        url = urllib.parse.urljoin(base, href_m.group(1))
+        if not url.startswith(("http://", "https://")):
+            continue
+        rel = rel_m.group(1).lower()
+        score = 180 if "apple-touch-icon" in rel else 0
+        if url.lower().split("?")[0].endswith(".svg"):
+            score += 500
+        size_m = ICON_SIZE.search(attrs)
+        if size_m:
+            score += int(size_m.group(1))
+        if best is None or score > best[0]:
+            best = (score, url)
+    return best[1] if best else None
+
+
+def verify_icon(sess: requests.Session, url: str) -> bool:
+    """アイコンが実在し、十分な解像度がありそうかを確かめる。
+
+    画像デコードはせず、バイト数を目安にする（伝統的favicon.icoは数百バイト〜1KB強、
+    120px以上のPNGは大抵それより大きい）。SVGは解像度の概念が無いので常に合格とする。
+    """
+    try:
+        r = sess.get(url, timeout=TIMEOUT, stream=True)
+        if r.status_code != 200:
+            return False
+        ctype = r.headers.get("Content-Type", "")
+        is_svg = "svg" in ctype.lower() or url.lower().split("?")[0].endswith(".svg")
+        if not is_svg and not ctype.lower().startswith("image/"):
+            return False
+        if is_svg:
+            return True
+        nbytes = len(r.raw.read(60000, decode_content=True))
+        return nbytes >= 1200
+    except requests.RequestException:
+        return False
+
+
+def find_icon(sess: requests.Session, html: str, origin: str, top_url: str) -> str | None:
+    """トップページのHTMLからアイコン候補を選び、実在と解像度を確かめてから採用する。
+    同一オリジンのものだけを扱う（robots.txt を1回しか確認していないため）。
+    """
+    candidates = []
+    picked = pick_icon_link(html, top_url)
+    if picked:
+        candidates.append(picked)
+    candidates += [urllib.parse.urljoin(origin, p) for p in FALLBACK_ICON_PATHS]
+    for url in candidates:
+        if urllib.parse.urlsplit(url).netloc != urllib.parse.urlsplit(origin).netloc:
+            continue
+        time.sleep(POLITE_DELAY)
+        if verify_icon(sess, url):
+            return url
+    return None
+
+
 def probe_paths(sess: requests.Session, origin: str) -> tuple[str, str] | None:
     """トップページに採用リンクが無いとき（ナビをJSで描く会社）だけ、慣例パスを確かめる。
 
@@ -216,6 +302,21 @@ def probe_paths(sess: requests.Session, origin: str) -> tuple[str, str] | None:
     return None
 
 
+# 再試行しても結果が変わらない失敗（方針上の拒否・URL自体が存在しない）。これだけは
+# 何度回しても再取得しない。それ以外（robots.txtが読めない・403・見つからない、等）は
+# 一時的な失敗かもしれないので、コードを直した後の再実行で毎回もう一度試す。
+PERMANENT_FAIL = ("robots.txt により対象外",)
+
+
+def _is_incomplete(rec: dict) -> bool:
+    status = rec.get("status", "")
+    if status in PERMANENT_FAIL or "HTTP 404" in status:
+        return False
+    if not rec.get("recruit"):
+        return True
+    return "icon" not in rec       # 採用ページ判明済みでも、アイコン未収集なら1回だけ再訪する
+
+
 def cmd_recruit(limit: int = 0) -> None:
     if not OFFICIAL_JSON.exists():
         raise SystemExit("先に python fetch_links.py wikidata を実行してください。")
@@ -224,10 +325,10 @@ def cmd_recruit(limit: int = 0) -> None:
 
     sess = requests.Session()
     sess.headers["User-Agent"] = UA
-    todo = [(k, v) for k, v in official.items() if k not in done]
+    todo = [(k, v) for k, v in official.items() if k not in done or _is_incomplete(done[k])]
     if limit:
         todo = todo[:limit]
-    print(f"未取得 {len(todo)} 社を処理する（1社あたり robots.txt とトップの2回、{POLITE_DELAY}秒間隔）")
+    print(f"処理対象 {len(todo)} 社（採用ページ未判明・アイコン未収集・前回一時失敗ぶんを含む、{POLITE_DELAY}秒間隔）")
 
     for i, (code, info) in enumerate(todo, 1):
         url = info["url"]
@@ -248,6 +349,8 @@ def cmd_recruit(limit: int = 0) -> None:
                     rec["status"] = f"トップページが HTTP {r.status_code}"
                 else:
                     r.encoding = r.apparent_encoding or r.encoding
+                    time.sleep(POLITE_DELAY)
+                    rec["icon"] = find_icon(sess, r.text, origin, r.url)
                     got = pick_recruit_link(r.text, r.url)
                     if got:
                         rec["recruit"], rec["recruit_text"] = got
@@ -288,10 +391,12 @@ def cmd_merge() -> None:
             "recruit": rec.get("recruit"),
             "recruit_text": rec.get("recruit_text"),
             "recruit_status": rec.get("status"),
+            "icon": rec.get("icon"),
         }
     MERGED_JSON.write_text(json.dumps(out, ensure_ascii=False, indent=1), encoding="utf-8")
     n_rec = sum(1 for v in out.values() if v["recruit"])
-    print(f"公式 {len(out)} 社 / 採用 {n_rec} 社 → {MERGED_JSON}")
+    n_icon = sum(1 for v in out.values() if v["icon"])
+    print(f"公式 {len(out)} 社 / 採用 {n_rec} 社 / アイコン {n_icon} 社 → {MERGED_JSON}")
 
 
 if __name__ == "__main__":

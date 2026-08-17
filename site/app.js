@@ -16,11 +16,12 @@
     });
   }
 
-  function logoImg(domain, size) {
+  // Google等のfavicon代行はドメインによって16x16固定で返ってくることを確認済みで、
+  // 拡大表示すると粗くなるため使わない。実物のアイコンが無い会社は何も出さない。
+  function logoImg(icon, size) {
     size = size || 16;
-    if (!domain) return "";
-    return '<img class="co-logo" src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) +
-      "&sz=" + (size * 2) + '" width="' + size + '" height="' + size + '" alt="">';
+    if (!icon) return "";
+    return '<img class="co-logo" src="' + icon + '" width="' + size + '" height="' + size + '" alt="">';
   }
 
   function manYen(v) {
@@ -54,7 +55,7 @@
         return;
       }
       results.innerHTML = matches.map(function (c) {
-        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.domain) + '<span>' + esc(c.name) +
+        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.icon) + '<span>' + esc(c.name) +
           '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
       }).join("");
       results.hidden = false;
@@ -134,15 +135,15 @@
         });
         var html = '<div class="hbars">';
         sorted.forEach(function (r) {
-          var name = r[0], href = r[1], v = r[2], domain = r[3];
+          var name = r[0], href = r[1], v = r[2], icon = r[3];
           if (v === null || v === undefined) {
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(icon) + esc(name) + '</a></span>' +
               '<span class="hbar-track"></span><span class="hbar-val na">非公表</span></div>';
           } else {
             var w = scalePct ? v * 100 : (v / max * 100);
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(icon) + esc(name) + '</a></span>' +
               '<span class="hbar-track"><span class="hbar-fill" style="width:' + Math.max(w, 1.5).toFixed(1) + '%"></span></span>' +
               '<span class="hbar-val">' + fmt(v) + "</span></div>";
           }
@@ -165,10 +166,10 @@
         }
         var picked = slugs.map(function (s) { return bySlug[s]; }).filter(Boolean);
         var rowsFor = function (key) {
-          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.domain]; });
+          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.icon]; });
         };
         var tableRows = picked.map(function (c) {
-          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.domain) + esc(c.name) + "</a></th>" +
+          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.icon) + esc(c.name) + "</a></th>" +
             "<td>" + esc((c.period || "").slice(0, 7)) + "期</td>" +
             "<td>" + manYen(c.salary) + "</td>" +
             "<td>" + (typeof c.age === "number" ? c.age.toFixed(1) + "歳" : "非公表") + "</td>" +
@@ -486,6 +487,41 @@
     root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
   }
 
+  // ---- 業界ショーケース（トップページ：横に流れる企業帯） ----
+  function initShowcase() {
+    var root = document.getElementById("showcase");
+    if (!root) return;
+    var tabs = root.querySelectorAll(".tab-btn");
+    var lanes = root.querySelectorAll(".lane");
+    var ctaLink = document.getElementById("showcase-cta-link");
+
+    function activate(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.classList.toggle("is-active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      lanes.forEach(function (l) {
+        l.classList.toggle("is-active", l.id === tab.dataset.target);
+      });
+      if (ctaLink) {
+        ctaLink.href = tab.dataset.href;
+        ctaLink.textContent = tab.dataset.group + tab.dataset.count + "社を1つの表で比較する →";
+      }
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () { activate(t); });
+    });
+    // ホバー・フォーカス中は帯を止める。動いたままだと狙った企業をクリックしにくいため
+    lanes.forEach(function (l) {
+      l.addEventListener("mouseenter", function () { l.classList.add("is-paused"); });
+      l.addEventListener("mouseleave", function () { l.classList.remove("is-paused"); });
+      l.addEventListener("focusin", function () { l.classList.add("is-paused"); });
+      l.addEventListener("focusout", function () { l.classList.remove("is-paused"); });
+    });
+  }
+
   // ---- スクロールで現れる（見えたときに一度だけ） ----
   // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
   // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
@@ -556,6 +592,7 @@
     initCompare();
     initShindan();
     initTekisei();
+    initShowcase();
     initReveal();
     initChrome();
   });

@@ -204,14 +204,13 @@ def slug_of(c: dict) -> str:
     return SLUG.get(code) or EXTRA_SLUG.get(code) or code
 
 
-def logo_img(domain: str | None, size: int = 16) -> str:
-    """企業ドメインのfaviconを企業名の隣に出す。ドメインが未解決の企業には何も出さない。"""
-    if not domain:
+def logo_img(icon: str | None, size: int = 16) -> str:
+    """企業のロゴ。公式サイトで見つけた実物のアイコン（icon）があればそれを出す。
+    無ければ何も出さない（代替マークは作らない。favicon代行サービスはドメインによって
+    実体が16x16固定で返ってくることを確認しており、拡大表示すると必ず粗くなるため使わない）。"""
+    if not icon:
         return ""
-    return (
-        f'<img class="co-logo" src="https://www.google.com/s2/favicons?domain={e(domain)}&amp;sz={size * 2}" '
-        f'width="{size}" height="{size}" alt="">'
-    )
+    return f'<img class="co-logo" src="{e(icon)}" width="{size}" height="{size}" alt="">'
 
 
 def short_name(name: str) -> str:
@@ -248,6 +247,9 @@ def load() -> tuple[list[dict], str]:
             off = (links.get(c["edinet_code"]) or {}).get("official")
             if off:
                 c["domain"] = urllib.parse.urlsplit(off).netloc.removeprefix("www.")
+        # 公式サイトの実物アイコン（fetch_links.py が<link rel="icon">等から見つけたもの）。
+        # 無ければ logo_img() は何も出さない
+        c["icon"] = (links.get(c["edinet_code"]) or {}).get("icon")
         pp = PROSE / f"{c['edinet_code']}.json"
         c["prose"] = json.loads(pp.read_text(encoding="utf-8")) if pp.exists() else {}
         # 財務（extract_financials.py の出力）。無い会社・無い項目は素通しし、
@@ -517,7 +519,7 @@ def donut(pct_value: float | None, size: int = 96, stroke: int = 11, method: str
 
 
 def hbars(rows: list[tuple[str, str, float | None, str | None]], fmt, scale: str = "group") -> str:
-    """横棒グラフ。(会社名, リンク先href, 値, ドメイン) の並びをCSSの幅%だけで描く。
+    """横棒グラフ。(会社名, リンク先href, 値, ロゴアイコンURL) の並びをCSSの幅%だけで描く。
 
     SVGではなくCSS幅を使う理由：折れ線グラフでラベルがviewBox外にはみ出て欠ける不具合を
     実ブラウザで踏んだため。横棒はテキストが通常のHTMLノードなら原理的にクリップされない。
@@ -533,8 +535,8 @@ def hbars(rows: list[tuple[str, str, float | None, str | None]], fmt, scale: str
         m = max(vals) or 1
         widths = [v / m * 100 if v is not None else None for _, _, v, _ in rows]
     items = []
-    for (name, href, v, domain), w in zip(rows, widths):
-        label = logo_img(domain) + (e(name) if not href else f'<a href="{e(href)}">{e(name)}</a>')
+    for (name, href, v, icon), w in zip(rows, widths):
+        label = logo_img(icon) + (e(name) if not href else f'<a href="{e(href)}">{e(name)}</a>')
         if v is None:
             items.append(
                 f'<div class="hbar-row"><span class="hbar-name" title="{e(name)}">{label}</span>'
@@ -625,7 +627,7 @@ def external_links(c: dict) -> str:
     host = urllib.parse.urlsplit(L["official"]).netloc
     items = [
         f'<a class="extlink" href="{e(L["official"])}" rel="nofollow noopener" target="_blank">'
-        f'{logo_img(host)}公式サイト <small>{e(host)}</small></a>'
+        f'{logo_img(c.get("icon"))}公式サイト <small>{e(host)}</small></a>'
     ]
     if L.get("recruit"):
         items.append(
@@ -923,8 +925,8 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
             nrows = "".join(
                 f'<tr{" class=\"self\"" if x["edinet_code"] == c["edinet_code"] else ""}>'
                 f'<th scope="row">'
-                + (f'{logo_img(x["domain"])}{e(x["short"])}' if x["edinet_code"] == c["edinet_code"]
-                   else f'<a href="{e(x["slug"])}.html">{logo_img(x["domain"])}{e(x["short"])}</a>')
+                + (f'{logo_img(x["icon"])}{e(x["short"])}' if x["edinet_code"] == c["edinet_code"]
+                   else f'<a href="{e(x["slug"])}.html">{logo_img(x["icon"])}{e(x["short"])}</a>')
                 + "</th>"
                 f'<td>{num(x["latest"]["employees"]["consolidated"], "人")}</td>'
                 f'<td>{man(x["latest"]["reporting_company"]["average_annual_salary_yen"])}</td>'
@@ -946,7 +948,7 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
     body = f"""
 <nav class="crumb"><a href="../index.html">トップ</a> › <a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a> › {e(c["short"])}</nav>
 
-<h1>{logo_img(c["domain"], size=28)}{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
+<h1>{logo_img(c["icon"], size=28)}{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
 <p class="lead">有価証券報告書（{e(period)}期）から機械的に抽出した数値です。業種：{e(c["industry"])}／証券コード {e(c["sec_code"][:4])}</p>
 {external_links(c)}
 
@@ -1050,7 +1052,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
             mark += ' <span class="stale" title="他社より古い期">古い期</span>'
             stale.append(c["short"])
         rows.append(
-            f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a>{mark}</th>'
+            f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["icon"])}{e(c["short"])}</a>{mark}</th>'
             + "".join(cells) + "</tr>"
         )
     band_note = (
@@ -1080,7 +1082,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     # 決算期は行ごとに違いうる（12月期・2月期・8月期）。列見出しに年度を書くと嘘になるので、
     # 値の下にその行の期を添える。上場が新しい会社は5期そろわない。
     tr = "".join(
-        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a></th>'
+        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["icon"])}{e(c["short"])}</a></th>'
         f'<td>{man(a[1])}<br><span class="small">{e(a[0][:7])}期</span></td>'
         f'<td>{man(b[1])}<br><span class="small">{e(b[0][:7])}期</span></td>'
         f'<td class="{"up" if r > 0 else "down"}">{r * 100:+.1f}%</td></tr>'
@@ -1096,7 +1098,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
 <tbody>{tr}</tbody></table></div>{excl}"""
 
     cc = "".join(
-        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a></th>'
+        f'<tr><th scope="row"><a href="../kigyou/{e(c["slug"])}.html">{logo_img(c["icon"])}{e(c["short"])}</a></th>'
         f'<td>{childcare_cell(c["latest"]["diversity"]["male_childcare_leave_ratio"], c["latest"]["diversity"]["male_childcare_leave_method"])}</td></tr>'
         for c in members
     )
@@ -1118,7 +1120,7 @@ def group_page(group: str, members: list[dict], fetched: str) -> str:
     fin_table = ""
     if fin_rows:
         body_rows = "".join(
-            f'<tr><th scope="row"><a href="../kigyou/{e(m["slug"])}.html">{logo_img(m["domain"])}{e(m["short"])}</a></th>'
+            f'<tr><th scope="row"><a href="../kigyou/{e(m["slug"])}.html">{logo_img(m["icon"])}{e(m["short"])}</a></th>'
             f'<td>{oku(lat["values"].get("revenue"))}</td>'
             f'<td>{oku(lat["values"].get("operating_income"))}</td>'
             f'<td>{oku(rpe) if rpe else NA}</td>'
@@ -1183,7 +1185,7 @@ IFRSの営業利益は日本基準と定義が異なります（非経常項目�
     )
 
     def _rows(get):
-        rs = [(c["short"], f'../kigyou/{c["slug"]}.html', get(c), c["domain"]) for c in members]
+        rs = [(c["short"], f'../kigyou/{c["slug"]}.html', get(c), c["icon"]) for c in members]
         rs.sort(key=lambda r: (r[2] is None, -(r[2] or 0)))
         return rs
 
@@ -1266,7 +1268,7 @@ def hikaku_page(companies: list[dict], groups: dict[str, list[dict]], fetched: s
     group_blocks = []
     for g, members in groups.items():
         opts = "".join(
-            f'<label><input type="checkbox" data-slug="{e(c["slug"])}"> {logo_img(c["domain"])}{e(c["short"])}</label>'
+            f'<label><input type="checkbox" data-slug="{e(c["slug"])}"> {logo_img(c["icon"])}{e(c["short"])}</label>'
             for c in sorted(members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True))
         )
         group_blocks.append(f"""<details>
@@ -1307,18 +1309,44 @@ def hikaku_page(companies: list[dict], groups: dict[str, list[dict]], fetched: s
 # ---------------------------------------------------------------- トップ
 
 def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: str) -> str:
-    cards = []
-    for g, members in groups.items():
-        links = "".join(
-            f'<li><a href="kigyou/{e(c["slug"])}.html">{logo_img(c["domain"])}{e(c["short"])}</a>'
-            f'<span class="sal">{man(c["latest"]["reporting_company"]["average_annual_salary_yen"])}</span></li>'
-            for c in sorted(members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True))
+    # 業界タブ＋横に流れる企業帯（マーキー）。以前は35業界ぶんの企業を縦一列にすべて並べ、
+    # ページ高が7万pxを超えていた（initReveal のコメント参照）。横帯なら何社載せても
+    # 縦の高さは1業界ぶんのままなので、全社リンクを維持しつつ軽くできる。
+    tabs, lanes = [], []
+    for i, (g, members) in enumerate(groups.items()):
+        gslug = GROUP_SLUG.get(g, g)
+        lane_id, tab_id = f"lane-{gslug}", f"tab-{gslug}"
+        active = " is-active" if i == 0 else ""
+        ordered = sorted(
+            members, key=lambda c: sort_key(c["latest"]["reporting_company"]["average_annual_salary_yen"], True)
         )
-        cards.append(f"""<section class="card">
-<h2><a href="gyoukai/{e(GROUP_SLUG.get(g, g))}.html">{e(g)}（{len(members)}社）</a></h2>
-<ul class="complist">{links}</ul>
-<p><a class="cta" href="gyoukai/{e(GROUP_SLUG.get(g, g))}.html">{len(members)}社を横比較する →</a></p>
-</section>""")
+        chips = "".join(
+            f'<a class="chip" href="kigyou/{e(c["slug"])}.html">{logo_img(c["icon"], 44)}'
+            f'<span class="chip-name">{e(c["short"])}</span></a>'
+            for c in ordered
+        )
+        n = len(members)
+        # 帯が短いと1周がすぐ終わって継ぎ目が目立つので、社数が少ない業界ほど多く複製する。
+        # 速さ（px/秒）はどの業界でも揃うよう、周期は複製回数に関係なく社数だけで決める。
+        repeat = 6 if n <= 4 else 4 if n <= 8 else 3 if n <= 16 else 2
+        dur = max(14.0, n * 2.2)
+        tabs.append(
+            f'<button type="button" id="{tab_id}" class="tab-btn{active}" role="tab" '
+            f'aria-selected="{"true" if i == 0 else "false"}" aria-controls="{lane_id}" '
+            f'data-target="{lane_id}" data-href="gyoukai/{e(gslug)}.html" data-group="{e(g)}" data-count="{n}">'
+            f'{e(g)}<span class="tab-n">{n}</span></button>'
+        )
+        lanes.append(f"""<div class="lane{active}" id="{lane_id}" role="tabpanel" aria-labelledby="{tab_id}" style="--dur:{dur:.1f}s;--shift:-{100 / repeat:.4f}%">
+<div class="lane-fade lane-fade-l"></div><div class="lane-fade lane-fade-r"></div>
+<div class="lane-track">{chips * repeat}</div>
+</div>""")
+
+    first_g, first_members = next(iter(groups.items()))
+    showcase_cta = (
+        f'<p class="showcase-cta"><a class="cta" id="showcase-cta-link" '
+        f'href="gyoukai/{e(GROUP_SLUG.get(first_g, first_g))}.html">'
+        f'{e(first_g)}{len(first_members)}社を1つの表で比較する →</a></p>'
+    )
 
     body = f"""
 <h1>有価証券報告書の数字だけで、同業他社を並べる</h1>
@@ -1351,7 +1379,13 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 </ul>
 </section>
 
-<div class="cards">{"".join(cards)}</div>
+<section class="showcase" id="showcase">
+<h2>業界を選んで、企業を流し見る</h2>
+<p class="lead small">気になる業界を選ぶと、その業界の企業が横に流れます。ホバーすると止まるので、気になった企業をクリックしてください。</p>
+<div class="showcase-tabs" role="tablist">{"".join(tabs)}</div>
+<div class="showcase-lanes">{"".join(lanes)}</div>
+{showcase_cta}
+</section>
 
 <section>
 <h2>数字の読み方</h2>
@@ -1397,7 +1431,7 @@ CSS = """:root{
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
-a,button,input,select,.card,.linklist li,.grid tbody tr{transition:color var(--t-fast) var(--ease),background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t) var(--ease),transform var(--t) var(--ease-out)}
+a,button,input,select,.linklist li,.grid tbody tr{transition:color var(--t-fast) var(--ease),background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t) var(--ease),transform var(--t) var(--ease-out)}
 
 /* スクロールで現れる。**html.js-anim が付いているときだけ隠す。**
    JSが落ちた・実行されない環境では .reveal は何もしないので、本文は必ず読める。
@@ -1497,8 +1531,6 @@ table{border-collapse:collapse;width:100%}
 .linklist li:hover::after{opacity:1;transform:translate(0,-50%)}
 
 /* ---- 会社ページ・一覧の手ざわり ---- */
-.card{transition:transform var(--t) var(--ease-out),box-shadow var(--t) var(--ease)}
-.card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
 .grid tbody tr:hover{background:#f4f7ff}
 .grid tbody th a{background-image:linear-gradient(var(--accent),var(--accent));background-size:0 1.5px;background-position:0 100%;background-repeat:no-repeat;transition:background-size var(--t) var(--ease)}
 .grid tbody th a:hover{background-size:100% 1.5px}
@@ -1624,16 +1656,41 @@ table{border-collapse:collapse;width:100%}
 
 .cols{display:flex;gap:32px;flex-wrap:wrap}
 .col{flex:1 1 320px;min-width:0}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin:26px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:6px 18px 16px;box-shadow:var(--shadow);transition:border-color .15s ease,box-shadow .15s ease}
-.card:hover{border-color:#c7cff0;box-shadow:0 2px 4px rgba(18,20,31,.05),0 12px 28px rgba(18,20,31,.09)}
-.card h2{font-size:16px;border:0;margin:16px 0 8px;padding:0}
-.complist{list-style:none;margin:0;padding:0;font-size:14px}
-.complist li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px dotted var(--line)}
-.complist li:last-child{border-bottom:none}
-.sal{color:var(--mut);font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .cta{display:inline-block;margin-top:12px;font-weight:700;font-size:14px;background:var(--fg);color:#fff!important;padding:10px 20px;border-radius:6px;text-decoration:none}
 .cta:hover{background:var(--accent-dk)}
+
+/* ---- 業界ショーケース（トップページ：横に流れる企業帯） ---- */
+.showcase-tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 16px}
+.tab-btn{appearance:none;cursor:pointer;font:inherit;font-size:13px;font-weight:700;color:var(--fg);
+  background:var(--card);border:1px solid var(--line);border-radius:999px;padding:7px 14px;
+  display:inline-flex;align-items:center;gap:6px;white-space:nowrap;
+  transition:background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
+.tab-btn:hover{border-color:#c7cff0;transform:translateY(-1px)}
+.tab-btn .tab-n{font-size:11px;font-weight:400;color:var(--mut)}
+.tab-btn.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
+.tab-btn.is-active .tab-n{color:rgba(255,255,255,.78)}
+
+.lane{display:none;position:relative;overflow:hidden;border-radius:var(--radius);box-shadow:var(--shadow);
+  background:linear-gradient(120deg,#10122a 0%,#1d2864 100%);padding:22px 0}
+.lane.is-active{display:block}
+.lane-fade{position:absolute;top:0;bottom:0;width:56px;z-index:2;pointer-events:none}
+.lane-fade-l{left:0;background:linear-gradient(90deg,#10122a,transparent)}
+.lane-fade-r{right:0;background:linear-gradient(270deg,#1d2864,transparent)}
+.lane-track{display:flex;gap:12px;width:max-content;padding:0 18px;animation:lane-scroll var(--dur,20s) linear infinite}
+.lane.is-paused .lane-track{animation-play-state:paused}
+@keyframes lane-scroll{from{transform:translateX(0)}to{transform:translateX(var(--shift,-50%))}}
+.chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;
+  width:112px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;
+  padding:16px 10px;color:#eef0fb;text-decoration:none;text-align:center;
+  transition:background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
+.chip:hover{background:rgba(255,255,255,.14);border-color:#8fa0ff;transform:translateY(-2px)}
+.chip .co-logo{width:44px;height:44px;margin:0;border-radius:9px;background:#fff}
+.chip-name{font-size:13px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.showcase-cta{margin:14px 0 0}
+@media(hover:none){
+  .lane-track{animation:none!important}
+  .lane{overflow-x:auto;-webkit-overflow-scrolling:touch}
+}
 .peers .small a{margin-right:10px;white-space:nowrap}
 .source{margin-top:48px;font-size:13px;color:var(--mut);background:#f7f8fb;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px}
 .source ul{padding-left:1.2em}
@@ -1678,11 +1735,12 @@ APP_JS = r"""(function () {
     });
   }
 
-  function logoImg(domain, size) {
+  // Google等のfavicon代行はドメインによって16x16固定で返ってくることを確認済みで、
+  // 拡大表示すると粗くなるため使わない。実物のアイコンが無い会社は何も出さない。
+  function logoImg(icon, size) {
     size = size || 16;
-    if (!domain) return "";
-    return '<img class="co-logo" src="https://www.google.com/s2/favicons?domain=' + encodeURIComponent(domain) +
-      "&sz=" + (size * 2) + '" width="' + size + '" height="' + size + '" alt="">';
+    if (!icon) return "";
+    return '<img class="co-logo" src="' + icon + '" width="' + size + '" height="' + size + '" alt="">';
   }
 
   function manYen(v) {
@@ -1716,7 +1774,7 @@ APP_JS = r"""(function () {
         return;
       }
       results.innerHTML = matches.map(function (c) {
-        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.domain) + '<span>' + esc(c.name) +
+        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.icon) + '<span>' + esc(c.name) +
           '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
       }).join("");
       results.hidden = false;
@@ -1796,15 +1854,15 @@ APP_JS = r"""(function () {
         });
         var html = '<div class="hbars">';
         sorted.forEach(function (r) {
-          var name = r[0], href = r[1], v = r[2], domain = r[3];
+          var name = r[0], href = r[1], v = r[2], icon = r[3];
           if (v === null || v === undefined) {
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(icon) + esc(name) + '</a></span>' +
               '<span class="hbar-track"></span><span class="hbar-val na">非公表</span></div>';
           } else {
             var w = scalePct ? v * 100 : (v / max * 100);
             html += '<div class="hbar-row"><span class="hbar-name" title="' + esc(name) +
-              '"><a href="' + href + '">' + logoImg(domain) + esc(name) + '</a></span>' +
+              '"><a href="' + href + '">' + logoImg(icon) + esc(name) + '</a></span>' +
               '<span class="hbar-track"><span class="hbar-fill" style="width:' + Math.max(w, 1.5).toFixed(1) + '%"></span></span>' +
               '<span class="hbar-val">' + fmt(v) + "</span></div>";
           }
@@ -1827,10 +1885,10 @@ APP_JS = r"""(function () {
         }
         var picked = slugs.map(function (s) { return bySlug[s]; }).filter(Boolean);
         var rowsFor = function (key) {
-          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.domain]; });
+          return picked.map(function (c) { return [c.name, base + "kigyou/" + c.slug + ".html", c[key], c.icon]; });
         };
         var tableRows = picked.map(function (c) {
-          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.domain) + esc(c.name) + "</a></th>" +
+          return "<tr><th scope=\"row\"><a href=\"" + base + "kigyou/" + c.slug + ".html\">" + logoImg(c.icon) + esc(c.name) + "</a></th>" +
             "<td>" + esc((c.period || "").slice(0, 7)) + "期</td>" +
             "<td>" + manYen(c.salary) + "</td>" +
             "<td>" + (typeof c.age === "number" ? c.age.toFixed(1) + "歳" : "非公表") + "</td>" +
@@ -2148,6 +2206,41 @@ APP_JS = r"""(function () {
     root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
   }
 
+  // ---- 業界ショーケース（トップページ：横に流れる企業帯） ----
+  function initShowcase() {
+    var root = document.getElementById("showcase");
+    if (!root) return;
+    var tabs = root.querySelectorAll(".tab-btn");
+    var lanes = root.querySelectorAll(".lane");
+    var ctaLink = document.getElementById("showcase-cta-link");
+
+    function activate(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.classList.toggle("is-active", on);
+        t.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      lanes.forEach(function (l) {
+        l.classList.toggle("is-active", l.id === tab.dataset.target);
+      });
+      if (ctaLink) {
+        ctaLink.href = tab.dataset.href;
+        ctaLink.textContent = tab.dataset.group + tab.dataset.count + "社を1つの表で比較する →";
+      }
+    }
+
+    tabs.forEach(function (t) {
+      t.addEventListener("click", function () { activate(t); });
+    });
+    // ホバー・フォーカス中は帯を止める。動いたままだと狙った企業をクリックしにくいため
+    lanes.forEach(function (l) {
+      l.addEventListener("mouseenter", function () { l.classList.add("is-paused"); });
+      l.addEventListener("mouseleave", function () { l.classList.remove("is-paused"); });
+      l.addEventListener("focusin", function () { l.classList.add("is-paused"); });
+      l.addEventListener("focusout", function () { l.classList.remove("is-paused"); });
+    });
+  }
+
   // ---- スクロールで現れる（見えたときに一度だけ） ----
   // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
   // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
@@ -2218,6 +2311,7 @@ APP_JS = r"""(function () {
     initCompare();
     initShindan();
     initTekisei();
+    initShowcase();
     initReveal();
     initChrome();
   });
@@ -2286,6 +2380,7 @@ def main() -> None:
         {
             "code": c["edinet_code"], "slug": c["slug"], "name": c["short"], "group": c["peer_group"],
             "domain": c["domain"],
+            "icon": c["icon"],
             "is_holding": c["is_holding"], "period": c["latest"]["source"]["period_end"],
             "salary": c["latest"]["reporting_company"]["average_annual_salary_yen"],
             "age": c["latest"]["reporting_company"]["average_age_years"],

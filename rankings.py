@@ -235,7 +235,7 @@ def _table(g, rows: list[tuple], metric: Metric, fmts: dict, start_rank: int = 1
         body.append(
             f'<tr><td class="rank-no">{i}</td>'
             f'<th scope="row"><a href="../kigyou/{g.e(c["slug"])}.html">'
-            f'{g.logo_img(c["domain"])}{g.e(c["short"])}</a>{mark}</th>'
+            f'{g.logo_img(c["icon"])}{g.e(c["short"])}</a>{mark}</th>'
             f'<td>{fmts[metric.fmt_key](v)}</td>'
             f'<td class="small">{g.e(c["peer_group"])}</td>'
             f'{std_cell}'
