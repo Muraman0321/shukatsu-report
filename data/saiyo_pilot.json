@@ -1,0 +1,821 @@
+{
+ "criteria": "主要12業界、連結従業員数の多い順（総合商社・保険業は全社）。採用ページURL判明済みのみ",
+ "groups": {
+  "総合商社": 99,
+  "銀行業": 8,
+  "保険業": 99,
+  "証券": 8,
+  "電気機器": 10,
+  "情報・通信業": 10,
+  "食料品": 10,
+  "医薬品": 10,
+  "化学": 8,
+  "輸送用機器": 8,
+  "小売": 8,
+  "建設業": 8
+ },
+ "total": 100,
+ "skipped_no_recruit_url": 235,
+ "companies": [
+  {
+   "edinet_code": "E02528",
+   "name": "住友商事株式会社",
+   "peer_group": "総合商社",
+   "employees": 82488,
+   "recruit_url": "http://www.scg-recruit.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02505",
+   "name": "豊田通商株式会社",
+   "peer_group": "総合商社",
+   "employees": 74927,
+   "recruit_url": "http://www.toyota-tsusho-recruit.com/global/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02513",
+   "name": "三井物産株式会社",
+   "peer_group": "総合商社",
+   "employees": 55463,
+   "recruit_url": "https://career.mitsui.com/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02958",
+   "name": "双日株式会社",
+   "peer_group": "総合商社",
+   "employees": 26789,
+   "recruit_url": "https://www.sojitz.com/jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03606",
+   "name": "株式会社三菱ＵＦＪフィナンシャル・グループ",
+   "peer_group": "銀行業",
+   "employees": 161576,
+   "recruit_url": "https://www.mufg.jp/careers/index.html?link_id=gnavi_careers",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03614",
+   "name": "株式会社三井住友フィナンシャルグループ",
+   "peer_group": "銀行業",
+   "employees": 122970,
+   "recruit_url": "https://www.smfg.co.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03611",
+   "name": "三井住友トラストグループ株式会社",
+   "peer_group": "銀行業",
+   "employees": 22526,
+   "recruit_url": "https://www.smtg.jp/recruit/group_new",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E31775",
+   "name": "株式会社ゆうちょ銀行",
+   "peer_group": "銀行業",
+   "employees": 10771,
+   "recruit_url": "https://www.jp-bank.japanpost.jp/recruit/rct_index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E32022",
+   "name": "株式会社横浜フィナンシャルグループ",
+   "peer_group": "銀行業",
+   "employees": 6313,
+   "recruit_url": "https://www.yokohamafg.co.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E30103",
+   "name": "株式会社めぶきフィナンシャルグループ",
+   "peer_group": "銀行業",
+   "employees": 5880,
+   "recruit_url": "https://www.mebuki-fg.co.jp:443/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03556",
+   "name": "株式会社千葉銀行",
+   "peer_group": "銀行業",
+   "employees": 4377,
+   "recruit_url": "https://www.chibabank.co.jp/recruit",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E32447",
+   "name": "株式会社西日本フィナンシャルホールディングス",
+   "peer_group": "銀行業",
+   "employees": 4252,
+   "recruit_url": "https://www.nnfh.co.jp/recruit_group/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03847",
+   "name": "東京海上ホールディングス株式会社",
+   "peer_group": "保険業",
+   "employees": 67526,
+   "recruit_url": "https://www.tokiomarinehd.com/careers/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E06141",
+   "name": "株式会社第一ライフグループ",
+   "peer_group": "保険業",
+   "employees": 60138,
+   "recruit_url": "https://www.daiichilife-group.com/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E23924",
+   "name": "ＳＯＭＰＯホールディングス株式会社",
+   "peer_group": "保険業",
+   "employees": 55702,
+   "recruit_url": "https://www.sompo-hd.com/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03851",
+   "name": "株式会社Ｔ＆Ｄホールディングス",
+   "peer_group": "保険業",
+   "employees": 21268,
+   "recruit_url": "https://www.td-holdings.co.jp/company/job.html",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E31755",
+   "name": "株式会社かんぽ生命保険",
+   "peer_group": "保険業",
+   "employees": 18487,
+   "recruit_url": "https://www.jp-life.japanpost.jp/recruit/index.html?sid=pc_header",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E24073",
+   "name": "アニコム　ホールディングス株式会社",
+   "peer_group": "保険業",
+   "employees": 1025,
+   "recruit_url": "https://www.anicom.co.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E26327",
+   "name": "ライフネット生命保険株式会社",
+   "peer_group": "保険業",
+   "employees": 242,
+   "recruit_url": "https://www.lifenet-seimei.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E05280",
+   "name": "株式会社アドバンスクリエイト",
+   "peer_group": "保険業",
+   "employees": 229,
+   "recruit_url": "https://www.advancecreate.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03752",
+   "name": "野村ホールディングス株式会社",
+   "peer_group": "証券",
+   "employees": 28677,
+   "recruit_url": "https://www.nomura.com/careers/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03753",
+   "name": "株式会社大和証券グループ本社",
+   "peer_group": "証券",
+   "employees": 14984,
+   "recruit_url": "https://www.daiwa-grp.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03756",
+   "name": "株式会社岡三証券グループ",
+   "peer_group": "証券",
+   "employees": 3472,
+   "recruit_url": "https://www.okasan.jp/recruit",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03764",
+   "name": "東海東京フィナンシャル・ホールディングス株式会社",
+   "peer_group": "証券",
+   "employees": 2528,
+   "recruit_url": "https://www.tokaitokyo-fh.jp/en/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03772",
+   "name": "いちよし証券株式会社",
+   "peer_group": "証券",
+   "employees": 1014,
+   "recruit_url": "https://www.ichiyoshi-recruit.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03788",
+   "name": "岩井コスモホールディングス株式会社",
+   "peer_group": "証券",
+   "employees": 848,
+   "recruit_url": "https://www.iwaicosmo-hd.jp/recruit.html",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03763",
+   "name": "アイザワ証券グループ株式会社",
+   "peer_group": "証券",
+   "employees": 707,
+   "recruit_url": "https://www.aizawa.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03768",
+   "name": "東洋証券株式会社",
+   "peer_group": "証券",
+   "employees": 632,
+   "recruit_url": "https://www.toyo-sec.co.jp/recruit/shinsotsu/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01737",
+   "name": "株式会社日立製作所",
+   "peer_group": "電気機器",
+   "employees": 287901,
+   "recruit_url": "https://careers.hitachi.com/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01607",
+   "name": "ミネベアミツミ株式会社",
+   "peer_group": "電気機器",
+   "employees": 81383,
+   "recruit_url": "https://www.minebeamitsumi.com/corp/recruit/index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02275",
+   "name": "株式会社リコー",
+   "peer_group": "電気機器",
+   "employees": 75635,
+   "recruit_url": "https://jp.ricoh.com/jobs",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01914",
+   "name": "株式会社村田製作所",
+   "peer_group": "電気機器",
+   "employees": 74302,
+   "recruit_url": "https://corporate.murata.com/careers",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00989",
+   "name": "コニカミノルタ株式会社",
+   "peer_group": "電気機器",
+   "employees": 34363,
+   "recruit_url": "https://careers.konicaminoltaus.com/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01740",
+   "name": "富士電機株式会社",
+   "peer_group": "電気機器",
+   "employees": 26955,
+   "recruit_url": "https://www.fujielectric.co.jp/recruit/graduates/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02140",
+   "name": "株式会社小糸製作所",
+   "peer_group": "電気機器",
+   "employees": 21507,
+   "recruit_url": "https://recruit.koito.co.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02652",
+   "name": "東京エレクトロン株式会社",
+   "peer_group": "電気機器",
+   "employees": 20236,
+   "recruit_url": "https://careers-tel.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01878",
+   "name": "横河電機株式会社",
+   "peer_group": "電気機器",
+   "employees": 18313,
+   "recruit_url": "https://www.yokogawa.com/about/careers/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01880",
+   "name": "スタンレー電気株式会社",
+   "peer_group": "電気機器",
+   "employees": 18230,
+   "recruit_url": "https://saiyo-stanley.com/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E04430",
+   "name": "ＮＴＴ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 344196,
+   "recruit_url": "https://group.ntt/jp/careers/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E02778",
+   "name": "ソフトバンクグループ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 73677,
+   "recruit_url": "https://group.softbank/about/careers",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E04425",
+   "name": "ＫＤＤＩ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 73198,
+   "recruit_url": "https://www.kddi.com/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E04426",
+   "name": "ソフトバンク株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 58432,
+   "recruit_url": "https://www.softbank.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E05000",
+   "name": "ＬＩＮＥヤフー株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 29863,
+   "recruit_url": "https://www.lycorp.co.jp/en/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E05080",
+   "name": "楽天グループ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 29419,
+   "recruit_url": "https://corp.rakuten.co.jp/careers/graduates/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E05739",
+   "name": "ＴＩＳＩ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 21598,
+   "recruit_url": "https://www.tisi.jp/saiyo.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E05062",
+   "name": "株式会社野村総合研究所",
+   "peer_group": "情報・通信業",
+   "employees": 16894,
+   "recruit_url": "https://www.nri.com/jp/career.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E30969",
+   "name": "株式会社ＳＨＩＦＴ",
+   "peer_group": "情報・通信業",
+   "employees": 11688,
+   "recruit_url": "https://recruit.shiftinc.jp/new_graduate/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E05304",
+   "name": "日鉄ソリューションズ株式会社",
+   "peer_group": "情報・通信業",
+   "employees": 10276,
+   "recruit_url": "https://www.nssol.nipponsteel.com/recruiting/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00436",
+   "name": "味の素株式会社",
+   "peer_group": "食料品",
+   "employees": 34787,
+   "recruit_url": "https://www.ajinomoto.co.jp/company/jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00375",
+   "name": "山崎製パン株式会社",
+   "peer_group": "食料品",
+   "employees": 33545,
+   "recruit_url": "https://www.yamazakipan.co.jp/recruit/index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00395",
+   "name": "キリンホールディングス株式会社",
+   "peer_group": "食料品",
+   "employees": 31144,
+   "recruit_url": "https://www.kirinholdings.com/en/careers/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00406",
+   "name": "株式会社ヤクルト本社",
+   "peer_group": "食料品",
+   "employees": 29618,
+   "recruit_url": "https://www.yakult.co.jp/saiyou/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00394",
+   "name": "アサヒグループホールディングス株式会社",
+   "peer_group": "食料品",
+   "employees": 28560,
+   "recruit_url": "https://www.asahigroup-holdings.com:443/careers/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00457",
+   "name": "日清食品ホールディングス株式会社",
+   "peer_group": "食料品",
+   "employees": 17988,
+   "recruit_url": "https://www.nissin.com/jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00446",
+   "name": "株式会社ニチレイ",
+   "peer_group": "食料品",
+   "employees": 17763,
+   "recruit_url": "https://www.nichirei.co.jp/saiyo/portal/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E21902",
+   "name": "明治ホールディングス株式会社",
+   "peer_group": "食料品",
+   "employees": 17103,
+   "recruit_url": "https://www.meiji.com/new-graduate/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00334",
+   "name": "日本ハム株式会社",
+   "peer_group": "食料品",
+   "employees": 15790,
+   "recruit_url": "https://www.nipponham.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00417",
+   "name": "コカ・コーラボトラーズジャパンホールディングス株式会社",
+   "peer_group": "食料品",
+   "employees": 12667,
+   "recruit_url": "https://www.ccbji.co.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E21183",
+   "name": "大塚ホールディングス株式会社",
+   "peer_group": "医薬品",
+   "employees": 37758,
+   "recruit_url": "https://www.otsuka.com/jp/company/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00984",
+   "name": "第一三共株式会社",
+   "peer_group": "医薬品",
+   "employees": 20171,
+   "recruit_url": "https://www.daiichisankyo.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00920",
+   "name": "アステラス製薬株式会社",
+   "peer_group": "医薬品",
+   "employees": 14099,
+   "recruit_url": "https://astellas.com/jp/careers",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00939",
+   "name": "エーザイ株式会社",
+   "peer_group": "医薬品",
+   "employees": 10543,
+   "recruit_url": "http://www.eisai-recruit.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00942",
+   "name": "ロート製薬株式会社",
+   "peer_group": "医薬品",
+   "employees": 9292,
+   "recruit_url": "https://www.rohto.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00932",
+   "name": "中外製薬株式会社",
+   "peer_group": "医薬品",
+   "employees": 7872,
+   "recruit_url": "https://www.chugai-pharm.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00923",
+   "name": "塩野義製薬株式会社",
+   "peer_group": "医薬品",
+   "employees": 6223,
+   "recruit_url": "https://www.shionogi.com/jp/ja/recruit.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00816",
+   "name": "協和キリン株式会社",
+   "peer_group": "医薬品",
+   "employees": 5161,
+   "recruit_url": "https://www.kyowakirin.co.jp/careers/recruit/index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01018",
+   "name": "株式会社ツムラ",
+   "peer_group": "医薬品",
+   "employees": 4923,
+   "recruit_url": "https://tsumura-saiyou.snar.jp/entry.aspx?entryid=4048f0e5-14cf-4468-977f-cdcbe0df37c7",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00974",
+   "name": "東和薬品株式会社",
+   "peer_group": "医薬品",
+   "employees": 4923,
+   "recruit_url": "https://www.towayakuhin.co.jp/recruit/entry/new/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00873",
+   "name": "東レ株式会社",
+   "peer_group": "化学",
+   "employees": 46294,
+   "recruit_url": "https://www.toray.co.jp/feature/20200421.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00892",
+   "name": "日本ペイントホールディングス株式会社",
+   "peer_group": "化学",
+   "employees": 38481,
+   "recruit_url": "https://www.nipponpaint.co.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00883",
+   "name": "花王株式会社",
+   "peer_group": "化学",
+   "employees": 31514,
+   "recruit_url": "https://www.kao.com/cn/careers/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00752",
+   "name": "住友化学株式会社",
+   "peer_group": "化学",
+   "employees": 27491,
+   "recruit_url": "http://www.saiyo-sc.com/index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00820",
+   "name": "積水化学工業株式会社",
+   "peer_group": "化学",
+   "employees": 26752,
+   "recruit_url": "https://www.sekisui.co.jp/person/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00990",
+   "name": "株式会社資生堂",
+   "peer_group": "化学",
+   "employees": 26330,
+   "recruit_url": "https://corp.shiseido.com/jp/careers/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00792",
+   "name": "エア・ウォーター株式会社",
+   "peer_group": "化学",
+   "employees": 21824,
+   "recruit_url": "https://site.awi.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00751",
+   "name": "株式会社レゾナック・ホールディングス",
+   "peer_group": "化学",
+   "employees": 21525,
+   "recruit_url": "https://www.resonac.com/surprise-yourself/en/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E02142",
+   "name": "日産自動車株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 120079,
+   "recruit_url": "https://www.nissan-global.com/EN/INNOVATION/DESIGN/RECRUIT/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01593",
+   "name": "株式会社アイシン",
+   "peer_group": "輸送用機器",
+   "employees": 113292,
+   "recruit_url": "https://www.aisin.com/jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02163",
+   "name": "マツダ株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 47144,
+   "recruit_url": "https://www.mazda.com/ja/careers/newgraduate-1/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02127",
+   "name": "川崎重工業株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 41652,
+   "recruit_url": "https://www.khi-saiyo.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E01108",
+   "name": "豊田合成株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 41304,
+   "recruit_url": "https://www.toyoda-gosei.co.jp/recruit/info/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02152",
+   "name": "株式会社ＳＵＢＡＲＵ",
+   "peer_group": "輸送用機器",
+   "employees": 37542,
+   "recruit_url": "https://www.subaru.co.jp/recruit/guide/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02176",
+   "name": "ＮＯＫ株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 36655,
+   "recruit_url": "https://recruit.nokgrp.com/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E02213",
+   "name": "三菱自動車工業株式会社",
+   "peer_group": "輸送用機器",
+   "employees": 27695,
+   "recruit_url": "https://www.mitsubishi-motors.com/jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E03061",
+   "name": "イオン株式会社",
+   "peer_group": "小売",
+   "employees": 179230,
+   "recruit_url": "https://recruit.aeon.info/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03217",
+   "name": "株式会社ファーストリテイリング",
+   "peer_group": "小売",
+   "employees": 59522,
+   "recruit_url": "https://www.fastretailing.com/employment/en/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03462",
+   "name": "株式会社セブン＆アイ・ホールディングス",
+   "peer_group": "小売",
+   "employees": 35967,
+   "recruit_url": "https://www.7andi.com/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03464",
+   "name": "株式会社ツルハホールディングス",
+   "peer_group": "小売",
+   "employees": 27681,
+   "recruit_url": "https://www.tsuruha-hd-recruit.jp/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03139",
+   "name": "株式会社ヤマダホールディングス",
+   "peer_group": "小売",
+   "employees": 26747,
+   "recruit_url": "https://www.yamada-holdings.jp/recruit/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E04896",
+   "name": "株式会社アインホールディングス",
+   "peer_group": "小売",
+   "employees": 17332,
+   "recruit_url": "https://ain-recruit.co.jp/specialsite/",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03280",
+   "name": "株式会社パン・パシフィック・インターナショナルホールディングス",
+   "peer_group": "小売",
+   "employees": 17075,
+   "recruit_url": "http://www.ppihgroup.jp/recruit/?pre=hd",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E03519",
+   "name": "株式会社マツキヨココカラ＆カンパニー",
+   "peer_group": "小売",
+   "employees": 14293,
+   "recruit_url": "https://www.matsukiyococokara.com/pages/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00143",
+   "name": "積水ハウス株式会社",
+   "peer_group": "建設業",
+   "employees": 32186,
+   "recruit_url": "https://www.sekisuihouse.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00011",
+   "name": "住友林業株式会社",
+   "peer_group": "建設業",
+   "employees": 27613,
+   "recruit_url": "https://sfc.jp/information/saiyou/employment/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00053",
+   "name": "清水建設株式会社",
+   "peer_group": "建設業",
+   "employees": 22278,
+   "recruit_url": "https://www.shimz.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00058",
+   "name": "鹿島建設株式会社",
+   "peer_group": "建設業",
+   "employees": 21170,
+   "recruit_url": "https://www.kajima.co.jp/prof/recruit/new/index.html",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00052",
+   "name": "大成建設株式会社",
+   "peer_group": "建設業",
+   "employees": 18503,
+   "recruit_url": "https://www.taisei-saiyo-new.jp/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00055",
+   "name": "株式会社大林組",
+   "peer_group": "建設業",
+   "employees": 18031,
+   "recruit_url": "https://www.obayashi.co.jp/recruit/",
+   "is_holding": false
+  },
+  {
+   "edinet_code": "E00322",
+   "name": "コムシスホールディングス株式会社",
+   "peer_group": "建設業",
+   "employees": 17765,
+   "recruit_url": "https://www.comsys-hd.co.jp/recruit.html",
+   "is_holding": true
+  },
+  {
+   "edinet_code": "E00094",
+   "name": "エクシオグループ株式会社",
+   "peer_group": "建設業",
+   "employees": 17751,
+   "recruit_url": "https://www.exeo.co.jp/recruit/index_new.html",
+   "is_holding": false
+  }
+ ]
+}

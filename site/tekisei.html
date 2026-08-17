@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学部・興味から業界を絞る診断｜文系/理系・やりたい仕事から1,549社を絞り込む</title>
+<meta name="description" content="学部の系統とやりたい仕事のタイプを選ぶと、一般的な傾向にもとづいて業界を絞り込みます。採用ページに対象学部が明記されている会社は、その原文も一緒に出します。1,549社が対象です。">
+<link rel="canonical" href="https://shukatsu-data.com/tekisei.html">
+<meta property="og:title" content="学部・興味から業界を絞る診断｜文系/理系・やりたい仕事から1,549社を絞り込む">
+<meta property="og:description" content="学部の系統とやりたい仕事のタイプを選ぶと、一般的な傾向にもとづいて業界を絞り込みます。採用ページに対象学部が明記されている会社は、その原文も一緒に出します。1,549社が対象です。">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="style.css?v=a902d7ed">
+<script src="app.js?v=a902d7ed" defer></script>
+</head>
+<body data-base="">
+<header class="site">
+  <a class="brand" href="index.html">
+    <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
+      <rect x="1" y="12" width="5" height="9" rx="1" fill="#fff"/>
+      <rect x="8.5" y="6" width="5" height="15" rx="1" fill="#fff" opacity=".78"/>
+      <rect x="16" y="1" width="5" height="20" rx="1" fill="#fff" opacity=".5"/>
+    </svg>
+    <span class="brand-word">Shukatsu.com</span>
+  </a>
+  <span class="tagline">有価証券報告書の数字だけで、同業他社を並べる</span>
+  <nav class="header-nav"><a href="shindan.html">就活の軸診断</a><a href="tekisei.html">学部・興味から絞る</a><a href="ranking/index.html">ランキング</a><a href="hikaku.html">企業を選んで比較する →</a></nav>
+  <div class="site-search" data-pos="header">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
+</header>
+<main>
+
+<nav class="crumb"><a href="index.html">トップ</a> › 学部・興味から絞る診断</nav>
+
+<h1>学部・興味から業界を絞る診断</h1>
+<p class="lead">
+<b>学部の系統</b>と<b>やりたい仕事のタイプ</b>を選ぶと、一般的な傾向にもとづいて業界・会社を絞り込みます。
+</p>
+<p class="lead small">
+これは性格診断でも適性検査でもありません。<b>学部と業界の対応づけは、就活で広く言われる一般的な傾向</b>であり、
+個々の会社の採用実態を保証するものではありません。採用ページに「学部・学科不問」などと実際に書かれている会社は、
+その原文をそのまま引用して出典付きで出します。一般論より、会社が公式に書いた言葉を優先してください。
+</p>
+
+<div id="tekisei" class="shindan tekisei" data-state="pick">
+  <section class="tk-pick">
+    <h2>1. 学部の系統</h2>
+    <div class="tk-optgrid tk-faculty"><button class="tk-opt" type="button" data-kind="faculty" data-key="bunkei"><b>文系</b><small>法・経済・商・経営・文学部など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="rikei_kougaku"><b>理系（工学・情報系）</b><small>工学・情報・機械・電気・電子など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="rikei_seimei"><b>理系（生命科学系）</b><small>薬学・農学・理学・生命科学・化学など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="toranai"><b>決めていない／学部はあまり関係ない</b><small>文理不問で探したい</small></button></div>
+    <h2>2. やりたい仕事のタイプ（最大2つ）</h2>
+    <div class="tk-optgrid tk-job"><button class="tk-opt" type="button" data-kind="job" data-key="global"><b>海外・グローバルに関わる仕事</b><small>海外売上高比率が高い会社を優先して並べる</small></button><button class="tk-opt" type="button" data-kind="job" data-key="monodukuri"><b>ものづくり・技術で新しい価値をつくる仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="okane"><b>数字・お金を扱う仕事（金融・財務）</b></button><button class="tk-opt" type="button" data-kind="job" data-key="hito"><b>人と接する・サービスをつくる仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="kenkyu"><b>研究・専門性を極める仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="infra"><b>社会の基盤（インフラ・物流・エネルギー）を支える仕事</b></button></div>
+    <button class="tk-go cta-btn" type="button" disabled>この条件で絞り込む</button>
+  </section>
+
+  <section class="tk-result" hidden>
+    <h2>条件に合う業界</h2>
+    <p class="tk-summary"></p>
+    <div class="scroll"><table class="grid tk-groups">
+      <thead><tr><th>業界</th><th>該当社数</th><th>対象学部の傾向</th><th>やりたい仕事との一致</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+
+    <h2>会社一覧</h2>
+    <div class="tk-filters">
+      <label><input type="checkbox" class="tk-nohd" checked> 持株会社を除く</label>
+      <label><input type="checkbox" class="tk-globalsort"> 海外売上高比率が高い順に並べる</label>
+    </div>
+    <div class="scroll"><table class="grid tk-table">
+      <thead><tr><th>会社</th><th>業界</th><th>規模（連結従業員数）</th><th>対象学部</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="caveat">
+      「対象学部」欄で<b>出典が付いているもの</b>は、その会社の採用ページに実際に書かれていた文言です。
+      出典が無いものは、業界レベルの一般的な傾向から機械的に表示しているだけで、その会社の事実ではありません。
+    </p>
+    <div class="sd-actions"><button class="tk-retry" type="button">条件を選び直す</button></div>
+  </section>
+</div>
+
+<section>
+<h2>業界ごとの一般的な傾向（この診断が使っている対応表）</h2>
+<p class="lead small">恣意的な絞り込みに見えないよう、判断の根拠をそのまま出します。技術系採用の有無・研究開発の比重・
+資本集約か労働集約かなど業種の実態にもとづく機械的な対応づけで、個々の企業の採用方針を示すものではありません。</p>
+<div class="scroll"><table class="grid">
+<thead><tr><th>業界</th><th>対象学部の傾向</th><th>やりたい仕事との一致</th></tr></thead>
+<tbody><tr><th scope="row">その他製品</th><td>文系・理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">その他金融</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">ガス業</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">ガラス・土石</th><td>理系（工学・情報系）・理系（生命科学系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">ゴム製品</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">サービス業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">パルプ・紙</th><td>理系（工学・情報系）・理系（生命科学系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">不動産業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">保険業</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">倉庫運輸</th><td>文系・決めていない／学部はあまり関係ない</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">化学</th><td>理系（生命科学系）・理系（工学・情報系）</td><td>研究・専門性を極める仕事・ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">医薬品</th><td>理系（生命科学系）</td><td>研究・専門性を極める仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">卸売業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">小売</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">建設業</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">情報・通信業</th><td>理系（工学・情報系）・文系・決めていない／学部はあまり関係ない</td><td>ものづくり・技術で新しい価値をつくる仕事・研究・専門性を極める仕事</td></tr><tr><th scope="row">機械</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">水産農林</th><td>理系（生命科学系）・文系</td><td>人と接する・サービスをつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">海運</th><td>文系・理系（工学・情報系）</td><td>海外・グローバルに関わる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">石油・石炭</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">空運</th><td>文系・決めていない／学部はあまり関係ない</td><td>海外・グローバルに関わる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">精密機器</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・研究・専門性を極める仕事</td></tr><tr><th scope="row">総合商社</th><td>文系・理系（工学・情報系）・理系（生命科学系）・決めていない／学部はあまり関係ない</td><td>海外・グローバルに関わる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">繊維製品</th><td>理系（生命科学系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">証券</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">輸送用機器</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">金属製品</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">鉄鋼</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">鉱業</th><td>理系（工学・情報系）</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">銀行業</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">陸運</th><td>文系・決めていない／学部はあまり関係ない</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">電力</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">電気機器</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">非鉄金属</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">食料品</th><td>文系・理系（生命科学系）</td><td>人と接する・サービスをつくる仕事・ものづくり・技術で新しい価値をつくる仕事</td></tr></tbody></table></div>
+<p class="caveat">データ取得日：2026-08-16</p>
+</section>
+
+</main>
+<footer class="site">
+  <p class="footer-search-label">企業を探す</p>
+  <div class="site-search" data-pos="footer">
+  <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
+  <div class="search-results" hidden></div>
+</div>
+  <p class="disclaimer">本サイトの数値は公的な一次情報から機械的に抽出したものですが、正確性を保証するものではありません。最終的な判断は必ず原典（有価証券報告書・各社の公式発表）をご確認ください。</p>
+  <p class="license">
+    出典：EDINET閲覧（提出）サイト（各ページに当該書類のURLを記載）／
+    <a href="https://www.digital.go.jp/resources/open_data/public_data_license_v1.0" rel="nofollow">公共データ利用規約（PDL1.0）</a>
+  </p>
+  <p class="license">本ページの数値は、上記の有価証券報告書を当サイトが機械的に抽出・整形したものです。</p>
+</footer>
+</body>
+</html>

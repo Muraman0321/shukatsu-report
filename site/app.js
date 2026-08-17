@@ -358,6 +358,134 @@
     root.querySelector(".sd-group").addEventListener("change", function () { renderTable(weights()); });
   }
 
+  // ---- 学部・興味から絞る診断（tekisei.html でのみ動く） ----
+  // shindan.js と同じく、回答はどこにも送らない。fetch するのは自サイトの静的JSONだけ。
+  function initTekisei() {
+    var root = document.getElementById("tekisei");
+    if (!root) return;
+
+    var D = null;
+    var faculty = null;                // 1つだけ選ぶ
+    var jobs = [];                     // 最大2つ
+    var elPick = root.querySelector(".tk-pick");
+    var elRes = root.querySelector(".tk-result");
+    var goBtn = root.querySelector(".tk-go");
+
+    function syncGo() {
+      goBtn.disabled = !faculty;
+    }
+
+    root.querySelectorAll('.tk-opt[data-kind="faculty"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        faculty = b.dataset.key;
+        root.querySelectorAll('.tk-opt[data-kind="faculty"]').forEach(function (x) {
+          x.classList.toggle("is-on", x === b);
+        });
+        syncGo();
+      });
+    });
+    root.querySelectorAll('.tk-opt[data-kind="job"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = b.dataset.key;
+        var i = jobs.indexOf(key);
+        if (i >= 0) {
+          jobs.splice(i, 1);
+          b.classList.remove("is-on");
+        } else {
+          if (jobs.length >= 2) {
+            var oldest = jobs.shift();
+            root.querySelectorAll('.tk-opt[data-kind="job"]').forEach(function (x) {
+              if (x.dataset.key === oldest) x.classList.remove("is-on");
+            });
+          }
+          jobs.push(key);
+          b.classList.add("is-on");
+        }
+      });
+    });
+
+    function matchScore(c) {
+      if (faculty !== "toranai" && c.faculty.indexOf(faculty) === -1) return -1;
+      if (!jobs.length) return 0;
+      var hit = jobs.filter(function (j) { return c.job.indexOf(j) !== -1; }).length;
+      return hit;                      // やりたい仕事を選んだのに1つも一致しないら除外する
+    }
+
+    var curMatched = [], curFacLabel = {};
+
+    function render(scroll) {
+      var facLabel = {}; D.faculty_options.forEach(function (o) { facLabel[o.key] = o.label; });
+      var jobLabel = {}; D.job_options.forEach(function (o) { jobLabel[o.key] = o.label; });
+
+      var matched = D.companies.map(function (c) {
+        return { c: c, score: matchScore(c) };
+      }).filter(function (r) { return jobs.length ? r.score > 0 : r.score >= 0; });
+      curMatched = matched; curFacLabel = facLabel;
+
+      var groupCount = {};
+      matched.forEach(function (r) {
+        groupCount[r.c.g] = (groupCount[r.c.g] || 0) + 1;
+      });
+      var groups = Object.keys(groupCount).sort(function (a, b) { return groupCount[b] - groupCount[a]; });
+
+      root.querySelector(".tk-summary").innerHTML =
+        "<b>" + esc(facLabel[faculty]) + "</b>" +
+        (jobs.length ? "・希望する仕事：<b>" + esc(jobs.map(function (j) { return jobLabel[j]; }).join("、")) + "</b>" : "") +
+        " に一致する業界は <b>" + groups.length + "</b>、会社は <b>" + matched.length + "</b> 件です。";
+
+      root.querySelector(".tk-groups tbody").innerHTML = groups.map(function (g) {
+        var tagRow = D.group_tags.filter(function (t) { return t.group === g; })[0] || { faculty: [], job: [] };
+        return "<tr><th scope=\"row\">" + esc(g) + "</th><td>" + groupCount[g] + "社</td>" +
+          "<td class=\"small\">" + esc(tagRow.faculty.join("・")) + "</td>" +
+          "<td class=\"small\">" + esc(tagRow.job.join("・") || "―") + "</td></tr>";
+      }).join("");
+
+      renderCompanies(matched, facLabel);
+      elPick.hidden = true; elRes.hidden = false;
+      if (scroll) elRes.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function renderCompanies(matched, facLabel) {
+      var noHd = root.querySelector(".tk-nohd").checked;
+      var byOverseas = root.querySelector(".tk-globalsort").checked;
+      var rows = matched.filter(function (r) { return !noHd || !r.c.h; }).slice();
+      rows.sort(function (a, b) {
+        if (byOverseas) {
+          var ao = a.c.overseas == null ? -1 : a.c.overseas, bo = b.c.overseas == null ? -1 : b.c.overseas;
+          if (bo !== ao) return bo - ao;
+        }
+        if (b.score !== a.score) return b.score - a.score;
+        return (b.c.emp || 0) - (a.c.emp || 0);
+      });
+      rows = rows.slice(0, 200);
+
+      root.querySelector(".tk-table tbody").innerHTML = rows.map(function (r) {
+        var c = r.c;
+        var faculty_cell;
+        if (c.target_faculty_fact) {
+          faculty_cell = esc(c.target_faculty_fact) + ' <span class="tk-fact">採用ページに記載</span>';
+        } else {
+          faculty_cell = '<span class="tk-guess">' + esc(c.faculty.map(function (f) { return facLabel[f]; }).join("・")) +
+            "（業界の一般的傾向）</span>";
+        }
+        return '<tr><th scope="row"><a href="' + base + "kigyou/" + esc(c.s) + '.html">' + esc(c.n) + "</a></th>" +
+          "<td>" + esc(c.g) + "</td><td>" + num0(c.emp, "人") + "</td><td>" + faculty_cell + "</td></tr>";
+      }).join("");
+    }
+
+    goBtn.addEventListener("click", function () {
+      fetch(base + "data/tekisei.json").then(function (r) { return r.json(); }).then(function (d) {
+        D = d; render();
+      });
+    });
+    root.querySelector(".tk-retry").addEventListener("click", function () {
+      elPick.hidden = false; elRes.hidden = true;
+      elPick.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    root.querySelector(".tk-nohd").addEventListener("change", function () { if (D) render(); });
+    root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
+  }
+
   // ---- スクロールで現れる（見えたときに一度だけ） ----
   // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
   // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
@@ -427,6 +555,7 @@
     initSearch();
     initCompare();
     initShindan();
+    initTekisei();
     initReveal();
     initChrome();
   });

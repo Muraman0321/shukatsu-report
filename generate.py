@@ -43,6 +43,7 @@ from pathlib import Path
 
 import rankings
 import shindan
+import tekisei
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data" / "companies"
@@ -254,6 +255,10 @@ def load() -> tuple[list[dict], str]:
         c["fin"] = fin.get(c["edinet_code"])
         c["overseas"] = ovs.get(c["edinet_code"])
         c["links"] = links.get(c["edinet_code"]) or {}
+        # 新卒採用枠（fetch_saiyo.py が生を集め、このセッションが直接読んで構造化したもの）。
+        # 対象は一部の会社のみ（パイロット）。無い会社は今まで通りリンクだけを出す
+        sp = ROOT / "data" / "saiyo" / f"{c['edinet_code']}.json"
+        c["saiyo"] = json.loads(sp.read_text(encoding="utf-8")) if sp.exists() else None
     idx = ROOT / "data" / "doc_index.csv"
     fetched = dt.date.fromtimestamp(idx.stat().st_mtime).isoformat()
     return companies, fetched
@@ -300,7 +305,7 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
   <span class="tagline">{e(TAGLINE)}</span>
-  <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
+  <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}tekisei.html">学部・興味から絞る</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
   {search_box("header")}
 </header>
 <main>
@@ -636,6 +641,39 @@ def external_links(c: dict) -> str:
     return f'<div class="extlinks">{"".join(items)}</div>{note}'
 
 
+def saiyo_section(c: dict) -> str:
+    """新卒の採用枠。**有報ではなく採用ページを出典にする、このサイトで2箇所目の例外。**
+
+    fetch_saiyo.py が採用サイトの生テキストを集め、このセッションが直接読んで
+    `data/saiyo/{code}.json` に構造化したもの（write_prose.py の事業内容要約と同じ立て付け）。
+    書かれていないことは書かない。対象学部などが原文に無ければ null のまま出さない。
+    対象は主要12業界のパイロット企業のみ。無い会社はこの節ごと出さず、今まで通りリンクだけになる。
+    """
+    s = c.get("saiyo")
+    if not s or not s.get("tracks"):
+        return ""
+    tracks = "".join(
+        f'<div class="saiyo-track"><h3>{e(t["name"])}</h3>'
+        + (f'<p class="saiyo-target"><b>対象学部：</b>{e(t["target_faculty"])}</p>' if t.get("target_faculty") else "")
+        + (f'<p>{e(t["description"])}</p>' if t.get("description") else "")
+        + "</div>"
+        for t in s["tracks"]
+    )
+    notes = "".join(f"<li>{e(n)}</li>" for n in (s.get("notes") or []))
+    notes_html = f'<ul class="saiyo-notes">{notes}</ul>' if notes else ""
+    srcs = " ".join(
+        f'<a href="{e(u)}" rel="nofollow noopener" target="_blank">{e(urllib.parse.urlsplit(u).netloc)}</a>'
+        for u in (s.get("source_urls") or [])
+    )
+    return f"""<section>
+<h2>新卒の採用枠</h2>
+<div class="saiyo-tracks">{tracks}</div>
+{notes_html}
+<p class="caveat">採用ページ（{srcs}）を{e(s.get("fetched_at", ""))}時点でこのセッションが読み、
+書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>
+</section>"""
+
+
 def oku(v) -> str:
     """億円表示。桁が大きい財務値を就活生が読める単位に落とす。"""
     if v is None:
@@ -916,6 +954,7 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 {holding_warning(c)}
 {trend_breaks(c)}
 {prose_html}
+{saiyo_section(c)}
 
 <section>
 <h2>基本データ（{e(period)}期・提出会社）</h2>
@@ -1512,6 +1551,27 @@ table{border-collapse:collapse;width:100%}
   .sd-axis{grid-template-columns:7.5em 1fr 3em}
 }
 
+/* ---- 新卒の採用枠 ---- */
+.saiyo-tracks{display:grid;gap:12px;margin:14px 0}
+.saiyo-track{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.saiyo-track h3{margin:0 0 6px;font-size:15.5px}
+.saiyo-track p{margin:4px 0}
+.saiyo-target{font-size:13.5px;color:var(--accent-dk)}
+.saiyo-notes{margin:10px 0;padding-left:1.3em;font-size:14px;line-height:1.8}
+
+/* ---- 学部・興味から絞る診断 ---- */
+.tk-optgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:10px 0 20px}
+.tk-opt{appearance:none;cursor:pointer;font:inherit;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.tk-opt b{display:block;font-size:14px}
+.tk-opt small{display:block;color:var(--mut);font-size:12px;margin-top:3px}
+.tk-opt:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.tk-opt.is-on{border-color:var(--accent);background:var(--note);box-shadow:0 0 0 2px var(--accent) inset}
+.tk-go{margin-top:6px}
+.tk-go:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.tk-filters{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:14px 0 12px;font-size:13.5px;color:var(--mut)}
+.tk-fact{font-size:11px;background:var(--note);color:var(--accent-dk);border-radius:5px;padding:2px 7px;font-weight:700}
+.tk-guess{color:var(--mut);font-size:12px}
+
 /* ---- 公式サイト・採用ページへの導線 ---- */
 .extlinks{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
 .extlink{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:700;text-decoration:none;color:var(--fg)}
@@ -1960,6 +2020,134 @@ APP_JS = r"""(function () {
     root.querySelector(".sd-group").addEventListener("change", function () { renderTable(weights()); });
   }
 
+  // ---- 学部・興味から絞る診断（tekisei.html でのみ動く） ----
+  // shindan.js と同じく、回答はどこにも送らない。fetch するのは自サイトの静的JSONだけ。
+  function initTekisei() {
+    var root = document.getElementById("tekisei");
+    if (!root) return;
+
+    var D = null;
+    var faculty = null;                // 1つだけ選ぶ
+    var jobs = [];                     // 最大2つ
+    var elPick = root.querySelector(".tk-pick");
+    var elRes = root.querySelector(".tk-result");
+    var goBtn = root.querySelector(".tk-go");
+
+    function syncGo() {
+      goBtn.disabled = !faculty;
+    }
+
+    root.querySelectorAll('.tk-opt[data-kind="faculty"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        faculty = b.dataset.key;
+        root.querySelectorAll('.tk-opt[data-kind="faculty"]').forEach(function (x) {
+          x.classList.toggle("is-on", x === b);
+        });
+        syncGo();
+      });
+    });
+    root.querySelectorAll('.tk-opt[data-kind="job"]').forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = b.dataset.key;
+        var i = jobs.indexOf(key);
+        if (i >= 0) {
+          jobs.splice(i, 1);
+          b.classList.remove("is-on");
+        } else {
+          if (jobs.length >= 2) {
+            var oldest = jobs.shift();
+            root.querySelectorAll('.tk-opt[data-kind="job"]').forEach(function (x) {
+              if (x.dataset.key === oldest) x.classList.remove("is-on");
+            });
+          }
+          jobs.push(key);
+          b.classList.add("is-on");
+        }
+      });
+    });
+
+    function matchScore(c) {
+      if (faculty !== "toranai" && c.faculty.indexOf(faculty) === -1) return -1;
+      if (!jobs.length) return 0;
+      var hit = jobs.filter(function (j) { return c.job.indexOf(j) !== -1; }).length;
+      return hit;                      // やりたい仕事を選んだのに1つも一致しないら除外する
+    }
+
+    var curMatched = [], curFacLabel = {};
+
+    function render(scroll) {
+      var facLabel = {}; D.faculty_options.forEach(function (o) { facLabel[o.key] = o.label; });
+      var jobLabel = {}; D.job_options.forEach(function (o) { jobLabel[o.key] = o.label; });
+
+      var matched = D.companies.map(function (c) {
+        return { c: c, score: matchScore(c) };
+      }).filter(function (r) { return jobs.length ? r.score > 0 : r.score >= 0; });
+      curMatched = matched; curFacLabel = facLabel;
+
+      var groupCount = {};
+      matched.forEach(function (r) {
+        groupCount[r.c.g] = (groupCount[r.c.g] || 0) + 1;
+      });
+      var groups = Object.keys(groupCount).sort(function (a, b) { return groupCount[b] - groupCount[a]; });
+
+      root.querySelector(".tk-summary").innerHTML =
+        "<b>" + esc(facLabel[faculty]) + "</b>" +
+        (jobs.length ? "・希望する仕事：<b>" + esc(jobs.map(function (j) { return jobLabel[j]; }).join("、")) + "</b>" : "") +
+        " に一致する業界は <b>" + groups.length + "</b>、会社は <b>" + matched.length + "</b> 件です。";
+
+      root.querySelector(".tk-groups tbody").innerHTML = groups.map(function (g) {
+        var tagRow = D.group_tags.filter(function (t) { return t.group === g; })[0] || { faculty: [], job: [] };
+        return "<tr><th scope=\"row\">" + esc(g) + "</th><td>" + groupCount[g] + "社</td>" +
+          "<td class=\"small\">" + esc(tagRow.faculty.join("・")) + "</td>" +
+          "<td class=\"small\">" + esc(tagRow.job.join("・") || "―") + "</td></tr>";
+      }).join("");
+
+      renderCompanies(matched, facLabel);
+      elPick.hidden = true; elRes.hidden = false;
+      if (scroll) elRes.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function renderCompanies(matched, facLabel) {
+      var noHd = root.querySelector(".tk-nohd").checked;
+      var byOverseas = root.querySelector(".tk-globalsort").checked;
+      var rows = matched.filter(function (r) { return !noHd || !r.c.h; }).slice();
+      rows.sort(function (a, b) {
+        if (byOverseas) {
+          var ao = a.c.overseas == null ? -1 : a.c.overseas, bo = b.c.overseas == null ? -1 : b.c.overseas;
+          if (bo !== ao) return bo - ao;
+        }
+        if (b.score !== a.score) return b.score - a.score;
+        return (b.c.emp || 0) - (a.c.emp || 0);
+      });
+      rows = rows.slice(0, 200);
+
+      root.querySelector(".tk-table tbody").innerHTML = rows.map(function (r) {
+        var c = r.c;
+        var faculty_cell;
+        if (c.target_faculty_fact) {
+          faculty_cell = esc(c.target_faculty_fact) + ' <span class="tk-fact">採用ページに記載</span>';
+        } else {
+          faculty_cell = '<span class="tk-guess">' + esc(c.faculty.map(function (f) { return facLabel[f]; }).join("・")) +
+            "（業界の一般的傾向）</span>";
+        }
+        return '<tr><th scope="row"><a href="' + base + "kigyou/" + esc(c.s) + '.html">' + esc(c.n) + "</a></th>" +
+          "<td>" + esc(c.g) + "</td><td>" + num0(c.emp, "人") + "</td><td>" + faculty_cell + "</td></tr>";
+      }).join("");
+    }
+
+    goBtn.addEventListener("click", function () {
+      fetch(base + "data/tekisei.json").then(function (r) { return r.json(); }).then(function (d) {
+        D = d; render();
+      });
+    });
+    root.querySelector(".tk-retry").addEventListener("click", function () {
+      elPick.hidden = false; elRes.hidden = true;
+      elPick.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    root.querySelector(".tk-nohd").addEventListener("change", function () { if (D) render(); });
+    root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
+  }
+
   // ---- スクロールで現れる（見えたときに一度だけ） ----
   // 隠すのは html.js-anim が付いている間だけ。IntersectionObserver が
   // 何らかの理由で発火しない環境（描画されないタブなど）に備えて、
@@ -2029,6 +2217,7 @@ APP_JS = r"""(function () {
     initSearch();
     initCompare();
     initShindan();
+    initTekisei();
     initReveal();
     initChrome();
   });
@@ -2078,6 +2267,10 @@ def main() -> None:
         urls += shindan.build(sys.modules[__name__], companies, fetched, SITE)
     except Exception as exc:  # noqa: BLE001 — 同上
         print(f"  !! 診断の生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
+    try:
+        urls += tekisei.build(sys.modules[__name__], companies, fetched, SITE)
+    except Exception as exc:  # noqa: BLE001 — 同上
+        print(f"  !! 学部・興味診断の生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
 
     for g, members in groups.items():
         path = f"/gyoukai/{GROUP_SLUG.get(g, g)}.html"

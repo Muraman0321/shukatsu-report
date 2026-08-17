@@ -167,6 +167,27 @@ table{border-collapse:collapse;width:100%}
   .sd-axis{grid-template-columns:7.5em 1fr 3em}
 }
 
+/* ---- 新卒の採用枠 ---- */
+.saiyo-tracks{display:grid;gap:12px;margin:14px 0}
+.saiyo-track{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+.saiyo-track h3{margin:0 0 6px;font-size:15.5px}
+.saiyo-track p{margin:4px 0}
+.saiyo-target{font-size:13.5px;color:var(--accent-dk)}
+.saiyo-notes{margin:10px 0;padding-left:1.3em;font-size:14px;line-height:1.8}
+
+/* ---- 学部・興味から絞る診断 ---- */
+.tk-optgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin:10px 0 20px}
+.tk-opt{appearance:none;cursor:pointer;font:inherit;text-align:left;background:var(--card);border:1.5px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+.tk-opt b{display:block;font-size:14px}
+.tk-opt small{display:block;color:var(--mut);font-size:12px;margin-top:3px}
+.tk-opt:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:var(--shadow)}
+.tk-opt.is-on{border-color:var(--accent);background:var(--note);box-shadow:0 0 0 2px var(--accent) inset}
+.tk-go{margin-top:6px}
+.tk-go:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.tk-filters{display:flex;gap:18px;flex-wrap:wrap;align-items:center;margin:14px 0 12px;font-size:13.5px;color:var(--mut)}
+.tk-fact{font-size:11px;background:var(--note);color:var(--accent-dk);border-radius:5px;padding:2px 7px;font-weight:700}
+.tk-guess{color:var(--mut);font-size:12px}
+
 /* ---- 公式サイト・採用ページへの導線 ---- */
 .extlinks{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0 0}
 .extlink{display:inline-flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:700;text-decoration:none;color:var(--fg)}
