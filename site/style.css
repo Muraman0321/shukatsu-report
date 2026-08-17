@@ -169,8 +169,8 @@ table{border-collapse:collapse;width:100%}
 .saiyo-tracks{display:grid;gap:12px;margin:14px 0}
 .saiyo-track{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
 .saiyo-track h3{margin:0 0 6px;font-size:15.5px}
-.saiyo-track p{margin:4px 0}
-.saiyo-target{font-size:13.5px;color:var(--accent-dk)}
+.saiyo-track p{margin:6px 0}
+.saiyo-field b{color:var(--accent-dk)}
 .saiyo-notes{margin:10px 0;padding-left:1.3em;font-size:14px;line-height:1.8}
 
 /* ---- 学部・興味から絞る診断 ---- */
@@ -252,27 +252,23 @@ table{border-collapse:collapse;width:100%}
 .tab-btn.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
 .tab-btn.is-active .tab-n{color:rgba(255,255,255,.78)}
 
-.lane{display:none;position:relative;overflow:hidden;border-radius:var(--radius);box-shadow:var(--shadow);
-  background:linear-gradient(120deg,#10122a 0%,#1d2864 100%);padding:22px 0}
+.lane{display:none;position:relative;background:transparent}
 .lane.is-active{display:block}
-.lane-fade{position:absolute;top:0;bottom:0;width:56px;z-index:2;pointer-events:none}
-.lane-fade-l{left:0;background:linear-gradient(90deg,#10122a,transparent)}
-.lane-fade-r{right:0;background:linear-gradient(270deg,#1d2864,transparent)}
-.lane-track{display:flex;gap:12px;width:max-content;padding:0 18px;animation:lane-scroll var(--dur,20s) linear infinite}
-.lane.is-paused .lane-track{animation-play-state:paused}
-@keyframes lane-scroll{from{transform:translateX(0)}to{transform:translateX(var(--shift,-50%))}}
-.chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;
-  width:112px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;
-  padding:16px 10px;color:#eef0fb;text-decoration:none;text-align:center;
-  transition:background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
-.chip:hover{background:rgba(255,255,255,.14);border-color:#8fa0ff;transform:translateY(-2px)}
-.chip .co-logo{width:44px;height:44px;margin:0;border-radius:9px;background:#fff}
-.chip-name{font-size:13px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lane-fade{position:absolute;top:0;bottom:0;width:44px;z-index:2;pointer-events:none}
+.lane-fade-l{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.lane-fade-r{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+/* ユーザーが自由にドラッグ/スワイプ/ホイールでスクロールできる。JS側は同じscrollLeftを
+   一定間隔でチップ幅ぶんだけ smooth に進めるだけなので、手動操作と競合しない。 */
+.lane-track{display:flex;gap:12px;overflow-x:auto;padding:4px 18px 12px;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.chip{flex:0 0 auto;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;
+  width:112px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  padding:16px 10px;color:var(--fg);text-decoration:none;text-align:center;
+  transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
+.chip:hover{border-color:#c7cff0;box-shadow:var(--shadow-lift);transform:translateY(-2px)}
+.chip .co-logo{width:44px;height:44px;margin:0;border-radius:9px;background:#fff;border:1px solid var(--line)}
+.chip-name{font-size:13px;font-weight:700;line-height:1.35;color:var(--fg);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .showcase-cta{margin:14px 0 0}
-@media(hover:none){
-  .lane-track{animation:none!important}
-  .lane{overflow-x:auto;-webkit-overflow-scrolling:touch}
-}
 .peers .small a{margin-right:10px;white-space:nowrap}
 .source{margin-top:48px;font-size:13px;color:var(--mut);background:#f7f8fb;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px}
 .source ul{padding-left:1.2em}

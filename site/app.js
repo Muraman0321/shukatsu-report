@@ -494,6 +494,63 @@
     var tabs = root.querySelectorAll(".tab-btn");
     var lanes = root.querySelectorAll(".lane");
     var ctaLink = document.getElementById("showcase-cta-link");
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var timer = null;
+    var pausedLane = null;
+    var resumeTimer = null;
+
+    // .lane-track は overflow-x:auto の普通のスクロール領域（ユーザーがドラッグ/スワイプ/
+    // ホイールで自由に動かせる）。自動送りはその同じ scrollLeft を一定間隔で
+    // チップ1つぶん進めるだけなので、手動スクロールと取り合いにならない。
+    // scrollTo({behavior:"smooth"}) はブラウザ・環境によって効かないことがあるため、
+    // 自前で requestAnimationFrame により scrollLeft を easing させる（挙動を環境に依存させない）。
+    function stride(track) {
+      var chip = track.querySelector(".chip");
+      if (!chip) return 0;
+      var gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+      return chip.getBoundingClientRect().width + gap;
+    }
+
+    function easeScrollTo(track, target, duration) {
+      var startX = track.scrollLeft, delta = target - startX, startTime = null;
+      if (!delta) return;
+      function step(ts) {
+        if (startTime === null) startTime = ts;
+        var t = Math.min(1, (ts - startTime) / duration);
+        var eased = 1 - Math.pow(1 - t, 3);
+        track.scrollLeft = startX + delta * eased;
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function advance(track) {
+      var st = stride(track);
+      if (!st) return;
+      var repeat = parseInt(track.dataset.repeat, 10) || 2;
+      var one = track.scrollWidth / repeat;          // 複製前1コピーぶんの幅
+      var next = track.scrollLeft + st;
+      if (next >= one - 1) {
+        track.scrollLeft = next - one;                // 継ぎ目を見せずに先頭へジャンプ
+      } else {
+        easeScrollTo(track, next, 420);
+      }
+    }
+
+    function stopAuto() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    function startAuto(lane) {
+      stopAuto();
+      if (reduceMotion || !lane) return;
+      var track = lane.querySelector(".lane-track");
+      if (!track) return;
+      timer = setInterval(function () {
+        if (pausedLane === lane) return;
+        advance(track);
+      }, 2600);                                       // 1社ぶん進めて、次まで数秒止まる
+    }
 
     function activate(tab) {
       tabs.forEach(function (t) {
@@ -501,25 +558,45 @@
         t.classList.toggle("is-active", on);
         t.setAttribute("aria-selected", on ? "true" : "false");
       });
+      var activeLane = null;
       lanes.forEach(function (l) {
-        l.classList.toggle("is-active", l.id === tab.dataset.target);
+        var on = l.id === tab.dataset.target;
+        l.classList.toggle("is-active", on);
+        if (on) activeLane = l;
       });
       if (ctaLink) {
         ctaLink.href = tab.dataset.href;
         ctaLink.textContent = tab.dataset.group + tab.dataset.count + "社を1つの表で比較する →";
       }
+      startAuto(activeLane);
     }
 
     tabs.forEach(function (t) {
       t.addEventListener("click", function () { activate(t); });
     });
-    // ホバー・フォーカス中は帯を止める。動いたままだと狙った企業をクリックしにくいため
+
+    // 触っている間は自動送りを止める。動いたままだと狙った企業をクリック/ドラッグしにくいため
     lanes.forEach(function (l) {
-      l.addEventListener("mouseenter", function () { l.classList.add("is-paused"); });
-      l.addEventListener("mouseleave", function () { l.classList.remove("is-paused"); });
-      l.addEventListener("focusin", function () { l.classList.add("is-paused"); });
-      l.addEventListener("focusout", function () { l.classList.remove("is-paused"); });
+      var pause = function () {
+        pausedLane = l;
+        if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null; }
+      };
+      var resume = function (delay) {
+        if (resumeTimer) clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(function () {
+          if (pausedLane === l) pausedLane = null;
+        }, delay || 0);
+      };
+      l.addEventListener("mouseenter", pause);
+      l.addEventListener("mouseleave", function () { resume(0); });
+      l.addEventListener("focusin", pause);
+      l.addEventListener("focusout", function () { resume(0); });
+      l.addEventListener("wheel", pause, { passive: true });
+      l.addEventListener("touchstart", pause, { passive: true });
+      l.addEventListener("touchend", function () { resume(2500); }, { passive: true });
     });
+
+    startAuto(root.querySelector(".lane.is-active"));
   }
 
   // ---- スクロールで現れる（見えたときに一度だけ） ----

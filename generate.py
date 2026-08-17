@@ -643,39 +643,6 @@ def external_links(c: dict) -> str:
     return f'<div class="extlinks">{"".join(items)}</div>{note}'
 
 
-def saiyo_section(c: dict) -> str:
-    """新卒の採用枠。**有報ではなく採用ページを出典にする、このサイトで2箇所目の例外。**
-
-    fetch_saiyo.py が採用サイトの生テキストを集め、このセッションが直接読んで
-    `data/saiyo/{code}.json` に構造化したもの（write_prose.py の事業内容要約と同じ立て付け）。
-    書かれていないことは書かない。対象学部などが原文に無ければ null のまま出さない。
-    対象は主要12業界のパイロット企業のみ。無い会社はこの節ごと出さず、今まで通りリンクだけになる。
-    """
-    s = c.get("saiyo")
-    if not s or not s.get("tracks"):
-        return ""
-    tracks = "".join(
-        f'<div class="saiyo-track"><h3>{e(t["name"])}</h3>'
-        + (f'<p class="saiyo-target"><b>対象学部：</b>{e(t["target_faculty"])}</p>' if t.get("target_faculty") else "")
-        + (f'<p>{e(t["description"])}</p>' if t.get("description") else "")
-        + "</div>"
-        for t in s["tracks"]
-    )
-    notes = "".join(f"<li>{e(n)}</li>" for n in (s.get("notes") or []))
-    notes_html = f'<ul class="saiyo-notes">{notes}</ul>' if notes else ""
-    srcs = " ".join(
-        f'<a href="{e(u)}" rel="nofollow noopener" target="_blank">{e(urllib.parse.urlsplit(u).netloc)}</a>'
-        for u in (s.get("source_urls") or [])
-    )
-    return f"""<section>
-<h2>新卒の採用枠</h2>
-<div class="saiyo-tracks">{tracks}</div>
-{notes_html}
-<p class="caveat">採用ページ（{srcs}）を{e(s.get("fetched_at", ""))}時点でこのセッションが読み、
-書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>
-</section>"""
-
-
 def oku(v) -> str:
     """億円表示。桁が大きい財務値を就活生が読める単位に落とす。"""
     if v is None:
@@ -956,7 +923,6 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 {holding_warning(c)}
 {trend_breaks(c)}
 {prose_html}
-{saiyo_section(c)}
 
 <section>
 <h2>基本データ（{e(period)}期・提出会社）</h2>
@@ -1326,19 +1292,18 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
             for c in ordered
         )
         n = len(members)
-        # 帯が短いと1周がすぐ終わって継ぎ目が目立つので、社数が少ない業界ほど多く複製する。
-        # 速さ（px/秒）はどの業界でも揃うよう、周期は複製回数に関係なく社数だけで決める。
+        # 帯が短いとすぐ一周して継ぎ目が目立つので、社数が少ない業界ほど多く複製する。
+        # JS側は「複製の1コピーぶんの幅」＝scrollWidth/repeat を1周とみなして無限ループさせる。
         repeat = 6 if n <= 4 else 4 if n <= 8 else 3 if n <= 16 else 2
-        dur = max(14.0, n * 2.2)
         tabs.append(
             f'<button type="button" id="{tab_id}" class="tab-btn{active}" role="tab" '
             f'aria-selected="{"true" if i == 0 else "false"}" aria-controls="{lane_id}" '
             f'data-target="{lane_id}" data-href="gyoukai/{e(gslug)}.html" data-group="{e(g)}" data-count="{n}">'
             f'{e(g)}<span class="tab-n">{n}</span></button>'
         )
-        lanes.append(f"""<div class="lane{active}" id="{lane_id}" role="tabpanel" aria-labelledby="{tab_id}" style="--dur:{dur:.1f}s;--shift:-{100 / repeat:.4f}%">
+        lanes.append(f"""<div class="lane{active}" id="{lane_id}" role="tabpanel" aria-labelledby="{tab_id}">
 <div class="lane-fade lane-fade-l"></div><div class="lane-fade lane-fade-r"></div>
-<div class="lane-track">{chips * repeat}</div>
+<div class="lane-track" data-repeat="{repeat}">{chips * repeat}</div>
 </div>""")
 
     first_g, first_members = next(iter(groups.items()))
@@ -1587,8 +1552,8 @@ table{border-collapse:collapse;width:100%}
 .saiyo-tracks{display:grid;gap:12px;margin:14px 0}
 .saiyo-track{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
 .saiyo-track h3{margin:0 0 6px;font-size:15.5px}
-.saiyo-track p{margin:4px 0}
-.saiyo-target{font-size:13.5px;color:var(--accent-dk)}
+.saiyo-track p{margin:6px 0}
+.saiyo-field b{color:var(--accent-dk)}
 .saiyo-notes{margin:10px 0;padding-left:1.3em;font-size:14px;line-height:1.8}
 
 /* ---- 学部・興味から絞る診断 ---- */
@@ -1670,27 +1635,23 @@ table{border-collapse:collapse;width:100%}
 .tab-btn.is-active{background:var(--accent);border-color:var(--accent);color:#fff}
 .tab-btn.is-active .tab-n{color:rgba(255,255,255,.78)}
 
-.lane{display:none;position:relative;overflow:hidden;border-radius:var(--radius);box-shadow:var(--shadow);
-  background:linear-gradient(120deg,#10122a 0%,#1d2864 100%);padding:22px 0}
+.lane{display:none;position:relative;background:transparent}
 .lane.is-active{display:block}
-.lane-fade{position:absolute;top:0;bottom:0;width:56px;z-index:2;pointer-events:none}
-.lane-fade-l{left:0;background:linear-gradient(90deg,#10122a,transparent)}
-.lane-fade-r{right:0;background:linear-gradient(270deg,#1d2864,transparent)}
-.lane-track{display:flex;gap:12px;width:max-content;padding:0 18px;animation:lane-scroll var(--dur,20s) linear infinite}
-.lane.is-paused .lane-track{animation-play-state:paused}
-@keyframes lane-scroll{from{transform:translateX(0)}to{transform:translateX(var(--shift,-50%))}}
-.chip{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;
-  width:112px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:14px;
-  padding:16px 10px;color:#eef0fb;text-decoration:none;text-align:center;
-  transition:background-color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
-.chip:hover{background:rgba(255,255,255,.14);border-color:#8fa0ff;transform:translateY(-2px)}
-.chip .co-logo{width:44px;height:44px;margin:0;border-radius:9px;background:#fff}
-.chip-name{font-size:13px;font-weight:700;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.lane-fade{position:absolute;top:0;bottom:0;width:44px;z-index:2;pointer-events:none}
+.lane-fade-l{left:0;background:linear-gradient(90deg,var(--bg),transparent)}
+.lane-fade-r{right:0;background:linear-gradient(270deg,var(--bg),transparent)}
+/* ユーザーが自由にドラッグ/スワイプ/ホイールでスクロールできる。JS側は同じscrollLeftを
+   一定間隔でチップ幅ぶんだけ smooth に進めるだけなので、手動操作と競合しない。 */
+.lane-track{display:flex;gap:12px;overflow-x:auto;padding:4px 18px 12px;
+  scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;scrollbar-width:thin}
+.chip{flex:0 0 auto;scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;
+  width:112px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);
+  padding:16px 10px;color:var(--fg);text-decoration:none;text-align:center;
+  transition:border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease),transform var(--t-fast) var(--ease-out)}
+.chip:hover{border-color:#c7cff0;box-shadow:var(--shadow-lift);transform:translateY(-2px)}
+.chip .co-logo{width:44px;height:44px;margin:0;border-radius:9px;background:#fff;border:1px solid var(--line)}
+.chip-name{font-size:13px;font-weight:700;line-height:1.35;color:var(--fg);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .showcase-cta{margin:14px 0 0}
-@media(hover:none){
-  .lane-track{animation:none!important}
-  .lane{overflow-x:auto;-webkit-overflow-scrolling:touch}
-}
 .peers .small a{margin-right:10px;white-space:nowrap}
 .source{margin-top:48px;font-size:13px;color:var(--mut);background:#f7f8fb;border:1px solid var(--line);border-radius:var(--radius-sm);padding:16px 18px}
 .source ul{padding-left:1.2em}
@@ -2213,6 +2174,63 @@ APP_JS = r"""(function () {
     var tabs = root.querySelectorAll(".tab-btn");
     var lanes = root.querySelectorAll(".lane");
     var ctaLink = document.getElementById("showcase-cta-link");
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var timer = null;
+    var pausedLane = null;
+    var resumeTimer = null;
+
+    // .lane-track は overflow-x:auto の普通のスクロール領域（ユーザーがドラッグ/スワイプ/
+    // ホイールで自由に動かせる）。自動送りはその同じ scrollLeft を一定間隔で
+    // チップ1つぶん進めるだけなので、手動スクロールと取り合いにならない。
+    // scrollTo({behavior:"smooth"}) はブラウザ・環境によって効かないことがあるため、
+    // 自前で requestAnimationFrame により scrollLeft を easing させる（挙動を環境に依存させない）。
+    function stride(track) {
+      var chip = track.querySelector(".chip");
+      if (!chip) return 0;
+      var gap = parseFloat(getComputedStyle(track).columnGap) || 0;
+      return chip.getBoundingClientRect().width + gap;
+    }
+
+    function easeScrollTo(track, target, duration) {
+      var startX = track.scrollLeft, delta = target - startX, startTime = null;
+      if (!delta) return;
+      function step(ts) {
+        if (startTime === null) startTime = ts;
+        var t = Math.min(1, (ts - startTime) / duration);
+        var eased = 1 - Math.pow(1 - t, 3);
+        track.scrollLeft = startX + delta * eased;
+        if (t < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    function advance(track) {
+      var st = stride(track);
+      if (!st) return;
+      var repeat = parseInt(track.dataset.repeat, 10) || 2;
+      var one = track.scrollWidth / repeat;          // 複製前1コピーぶんの幅
+      var next = track.scrollLeft + st;
+      if (next >= one - 1) {
+        track.scrollLeft = next - one;                // 継ぎ目を見せずに先頭へジャンプ
+      } else {
+        easeScrollTo(track, next, 420);
+      }
+    }
+
+    function stopAuto() {
+      if (timer) { clearInterval(timer); timer = null; }
+    }
+
+    function startAuto(lane) {
+      stopAuto();
+      if (reduceMotion || !lane) return;
+      var track = lane.querySelector(".lane-track");
+      if (!track) return;
+      timer = setInterval(function () {
+        if (pausedLane === lane) return;
+        advance(track);
+      }, 2600);                                       // 1社ぶん進めて、次まで数秒止まる
+    }
 
     function activate(tab) {
       tabs.forEach(function (t) {
@@ -2220,25 +2238,45 @@ APP_JS = r"""(function () {
         t.classList.toggle("is-active", on);
         t.setAttribute("aria-selected", on ? "true" : "false");
       });
+      var activeLane = null;
       lanes.forEach(function (l) {
-        l.classList.toggle("is-active", l.id === tab.dataset.target);
+        var on = l.id === tab.dataset.target;
+        l.classList.toggle("is-active", on);
+        if (on) activeLane = l;
       });
       if (ctaLink) {
         ctaLink.href = tab.dataset.href;
         ctaLink.textContent = tab.dataset.group + tab.dataset.count + "社を1つの表で比較する →";
       }
+      startAuto(activeLane);
     }
 
     tabs.forEach(function (t) {
       t.addEventListener("click", function () { activate(t); });
     });
-    // ホバー・フォーカス中は帯を止める。動いたままだと狙った企業をクリックしにくいため
+
+    // 触っている間は自動送りを止める。動いたままだと狙った企業をクリック/ドラッグしにくいため
     lanes.forEach(function (l) {
-      l.addEventListener("mouseenter", function () { l.classList.add("is-paused"); });
-      l.addEventListener("mouseleave", function () { l.classList.remove("is-paused"); });
-      l.addEventListener("focusin", function () { l.classList.add("is-paused"); });
-      l.addEventListener("focusout", function () { l.classList.remove("is-paused"); });
+      var pause = function () {
+        pausedLane = l;
+        if (resumeTimer) { clearTimeout(resumeTimer); resumeTimer = null; }
+      };
+      var resume = function (delay) {
+        if (resumeTimer) clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(function () {
+          if (pausedLane === l) pausedLane = null;
+        }, delay || 0);
+      };
+      l.addEventListener("mouseenter", pause);
+      l.addEventListener("mouseleave", function () { resume(0); });
+      l.addEventListener("focusin", pause);
+      l.addEventListener("focusout", function () { resume(0); });
+      l.addEventListener("wheel", pause, { passive: true });
+      l.addEventListener("touchstart", pause, { passive: true });
+      l.addEventListener("touchend", function () { resume(2500); }, { passive: true });
     });
+
+    startAuto(root.querySelector(".lane.is-active"));
   }
 
   // ---- スクロールで現れる（見えたときに一度だけ） ----
