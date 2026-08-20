@@ -15,7 +15,7 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-PER_COMPANY_CHARS = 1500
+PER_COMPANY_CHARS = 3500  # 2026-08-20: 1500字だと初任給の表がページ後半で切れる例があったため引き上げ
 
 
 def main() -> None:
