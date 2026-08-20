@@ -2167,6 +2167,52 @@ APP_JS = r"""(function () {
     root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
   }
 
+  // ---- 新卒の採用枠（企業ページに実行時で差し込む） ----
+  // HTMLには焼き込まない。data/saiyo.json をスラッグで引いて、見つかった会社だけ
+  // 「公式サイト・採用ページへの導線」(.extlinks) の直後にセクションを追加する。
+  // データが増えても data/saiyo.json を更新するだけで全ページに反映される
+  // （企業ページ1,500枚超を再生成しなくてよい）。
+  function initSaiyoInject() {
+    var anchor = document.querySelector(".extlinks");
+    if (!anchor) return;                            // 公式サイト情報が無い会社は対象外
+    var m = /\/kigyou\/([^/]+)\.html/.exec(location.pathname);
+    var slug = m ? m[1] : null;
+    if (!slug) return;
+
+    var FIELD_LABEL = { conditions: "条件", overview: "概要", timing: "時期" };
+
+    fetch(base + "data/saiyo.json").then(function (r) { return r.json(); }).then(function (all) {
+      var s = all[slug];
+      if (!s || !s.tracks || !s.tracks.length) return;
+
+      var tracks = s.tracks.map(function (t) {
+        var fields = ["conditions", "overview", "timing"].map(function (k) {
+          if (!t[k]) return "";
+          return '<p class="saiyo-field"><b>' + FIELD_LABEL[k] + '：</b>' + esc(t[k]) + "</p>";
+        }).join("");
+        return '<div class="saiyo-track"><h3>' + esc(t.name) + "</h3>" + fields + "</div>";
+      }).join("");
+
+      var notes = (s.notes || []).map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("");
+      var notesHtml = notes ? '<ul class="saiyo-notes">' + notes + "</ul>" : "";
+
+      var srcs = (s.source_urls || []).map(function (u) {
+        var host = "";
+        try { host = new URL(u).hostname; } catch (e) { host = u; }
+        return '<a href="' + esc(u) + '" rel="nofollow noopener" target="_blank">' + esc(host) + "</a>";
+      }).join(" ");
+
+      var section = document.createElement("section");
+      section.innerHTML =
+        "<h2>新卒の採用枠</h2>" +
+        '<div class="saiyo-tracks">' + tracks + "</div>" +
+        notesHtml +
+        '<p class="caveat">採用ページ（' + srcs + "）を" + esc(s.fetched_at || "") + "時点でこのセッションが読み、" +
+        "書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>";
+      anchor.insertAdjacentElement("afterend", section);
+    }).catch(function () { /* データ取得に失敗しても他の表示は止めない */ });
+  }
+
   // ---- 業界ショーケース（トップページ：横に流れる企業帯） ----
   function initShowcase() {
     var root = document.getElementById("showcase");
@@ -2349,6 +2395,7 @@ APP_JS = r"""(function () {
     initCompare();
     initShindan();
     initTekisei();
+    initSaiyoInject();
     initShowcase();
     initReveal();
     initChrome();
@@ -2437,6 +2484,15 @@ def main() -> None:
                    ensure_ascii=False, indent=1),
         encoding="utf-8",
     )
+
+    # 新卒の採用枠（fetch_saiyo.py + このセッションが構造化）。
+    # ここではHTMLに焼き込まず、スラッグ引きのJSONだけを書く。企業ページ側のJS（initSaiyoInject）が
+    # 自分のスラッグで引いて実行時にDOMへ差し込む。データが増えてもこのJSON1本を更新するだけでよく、
+    # 1,500ページ超の再生成が要らない（他セッションと同じgenerate.pyを同時に触るリスクを減らすため）
+    saiyo_bundle = {c["slug"]: c["saiyo"] for c in companies if c.get("saiyo")}
+    (SITE / "data" / "saiyo.json").write_text(
+        json.dumps(saiyo_bundle, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"  新卒の採用枠 {len(saiyo_bundle)}社ぶん → data/saiyo.json")
 
     today = dt.date.today().isoformat()
     entries = "".join(

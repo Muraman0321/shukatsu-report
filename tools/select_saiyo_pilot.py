@@ -1,14 +1,15 @@
-"""採用枠パイロットの対象企業を選ぶ。**このファイルは一度実行して結果を固定するための道具**。
+"""新卒の採用枠を作る対象企業を選ぶ。**このファイルは実行するたびに対象リストを作り直す道具**。
 
 ## 選び方とその理由
-主要12業界（就活で関心が集まりやすい業界）から、**連結従業員数の多い順**に会社を選ぶ。
-知名度で人手選びをすると恣意的になるので、既存のランキングページと同じ「客観的に測れる量」
-（規模）を基準にする。総合商社・保険業のように業界自体が小さいところは全社を対象にする。
+主要12業界（就活で関心が集まりやすい業界）の**全社**を対象にする（2026-08-17、パイロット100社
+から実用版に拡大）。連結従業員数の多い順に並べておくと、クロール・構造化を規模の大きい
+（＝関心が集まりやすい）会社から進められる。
 
 採用ページのURLが分かっていない会社（company_links.json に recruit が無い会社）は
 クロールしようがないので、この時点で除外する。
 
-出力: data/saiyo_pilot.json （edinet_code のリストと、選んだ理由を書いた要約）
+出力: data/saiyo_pilot.json （edinet_code のリストと、選んだ理由を書いた要約）。
+既存の data/saiyo/*.json はこのファイルを再実行しても消えない（別ファイル）。
 """
 
 from __future__ import annotations
@@ -19,21 +20,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# 業界名 → 上位何社を採るか。業界自体が小さい所は大きな数字にして全社を拾う
-TARGET_GROUPS: dict[str, int] = {
-    "総合商社": 99,
-    "銀行業": 8,
-    "保険業": 99,
-    "証券": 8,
-    "電気機器": 10,
-    "情報・通信業": 10,
-    "食料品": 10,
-    "医薬品": 10,
-    "化学": 8,
-    "輸送用機器": 8,
-    "小売": 8,
-    "建設業": 8,
-}
+# 対象12業界（この業界に属する会社は全社を対象にする。上限は付けない）
+TARGET_GROUPS: list[str] = [
+    "総合商社", "銀行業", "保険業", "証券", "電気機器", "情報・通信業",
+    "食料品", "医薬品", "化学", "輸送用機器", "小売", "建設業",
+]
 
 
 def main() -> None:
@@ -66,13 +57,13 @@ def main() -> None:
         })
 
     selected: list[dict] = []
-    for g, n in TARGET_GROUPS.items():
-        rows = sorted(by_group[g], key=lambda r: r["employees"], reverse=True)[:n]
+    for g in TARGET_GROUPS:
+        rows = sorted(by_group[g], key=lambda r: r["employees"], reverse=True)
         selected.extend(rows)
 
     out = {
-        "criteria": "主要12業界、連結従業員数の多い順（総合商社・保険業は全社）。採用ページURL判明済みのみ",
-        "groups": {g: TARGET_GROUPS[g] for g in TARGET_GROUPS},
+        "criteria": "主要12業界の全社（連結従業員数の多い順）。採用ページURL判明済みのみ",
+        "groups": TARGET_GROUPS,
         "total": len(selected),
         "skipped_no_recruit_url": skipped_no_recruit,
         "companies": selected,

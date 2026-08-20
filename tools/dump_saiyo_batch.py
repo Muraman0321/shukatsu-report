@@ -23,9 +23,10 @@ def main() -> None:
     ap.add_argument("--start", type=int, default=0)
     ap.add_argument("--count", type=int, default=10)
     ap.add_argument("--out", required=True)
+    ap.add_argument("--pilot", default="data/saiyo_pilot.json")
     args = ap.parse_args()
 
-    pilot = json.loads((ROOT / "data" / "saiyo_pilot.json").read_text(encoding="utf-8"))
+    pilot = json.loads((ROOT / args.pilot).read_text(encoding="utf-8"))
     companies = pilot["companies"][args.start: args.start + args.count]
 
     lines = []
