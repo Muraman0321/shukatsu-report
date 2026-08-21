@@ -41,6 +41,7 @@ import sys
 import urllib.parse
 from pathlib import Path
 
+import koumu
 import rankings
 import shindan
 import tekisei
@@ -307,7 +308,7 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
   <span class="tagline">{e(TAGLINE)}</span>
-  <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}tekisei.html">学部・興味から絞る</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
+  <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}tekisei.html">学部・興味から絞る</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}koumu/index.html">官公庁・政府系</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
   {search_box("header")}
 </header>
 <main>
@@ -1673,6 +1674,17 @@ footer.site>p{max-width:960px;margin:6px auto}
 .compare-groups details[open] summary:after{content:"−"}
 .compare-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
 .compare-checklist label{display:flex;align-items:center;gap:7px;font-size:13.5px;padding:5px 0;cursor:pointer}
+.koumu-groups{margin:8px 0 20px}
+.koumu-groups details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden}
+.koumu-groups summary{padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}
+.koumu-groups summary::-webkit-details-marker{display:none}
+.koumu-groups summary:after{content:"+";float:right;color:var(--mut);font-weight:400}
+.koumu-groups details[open] summary:after{content:"−"}
+.koumu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
+.koumu-list a{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;padding:7px 0;color:var(--fg);text-decoration:none;border-bottom:1px dashed var(--line)}
+.koumu-list a:hover{color:var(--link)}
+.koumu-list .koumu-flag{font-size:11px;color:var(--mut);white-space:nowrap}
+.koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
 """
@@ -2426,6 +2438,7 @@ def main() -> None:
         shutil.rmtree(SITE)
     (SITE / "kigyou").mkdir(parents=True)
     (SITE / "gyoukai").mkdir(parents=True)
+    (SITE / "koumu").mkdir(parents=True)
     (SITE / "data").mkdir(parents=True)
 
     (SITE / "style.css").write_text(CSS, encoding="utf-8")
@@ -2450,6 +2463,10 @@ def main() -> None:
         urls += tekisei.build(sys.modules[__name__], companies, fetched, SITE)
     except Exception as exc:  # noqa: BLE001 — 同上
         print(f"  !! 学部・興味診断の生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
+    try:
+        urls += koumu.build(sys.modules[__name__], fetched, SITE)
+    except Exception as exc:  # noqa: BLE001 — 同上
+        print(f"  !! 官公庁・政府系ページの生成に失敗した（企業ページは生成する）: {type(exc).__name__}: {exc}")
 
     for g, members in groups.items():
         path = f"/gyoukai/{GROUP_SLUG.get(g, g)}.html"

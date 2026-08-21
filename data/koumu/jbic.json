@@ -1,0 +1,36 @@
+{
+ "slug": "jbic",
+ "name": "株式会社国際協力銀行（JBIC）",
+ "kind": "政府系金融機関",
+ "fetched_at": "2026-08-21",
+ "target_faculty": null,
+ "tracks": [
+  {
+   "name": "総合職（新卒採用）",
+   "conditions": "2027年度・2028年度新卒採用を実施（募集要項の詳細は新卒採用サイトのエントリーページで案内）。",
+   "overview": "日本及び国際社会の健全な発展に貢献することを使命とする政策金融機関として、海外向け投融資等を担う。",
+   "timing": null
+  },
+  {
+   "name": "業務職（新卒採用）",
+   "conditions": "新卒採用サイトに業務職の区分あり。",
+   "overview": null,
+   "timing": null
+  }
+ ],
+ "notes": [
+  "新卒採用サイト（saiyou.jbic.go.jp）はJS描画のためクローラーから募集要項本文を取得できず。区分名（総合職・業務職）とエントリー年度のみ確認。"
+ ],
+ "salary": {
+  "heikin_nenkan_kyuyo": "8,371千円",
+  "heikin_nenrei": "38.6歳",
+  "kokka_shisu": "113.8（年齢・地域・学歴勘案）",
+  "note": "常勤職員（事務・技術）、令和6年度の役職員の報酬・給与等の公表資料による",
+  "source_url": "https://www.jbic.go.jp/ja/disclosure/image/publicinfo_info_houkyu2025.pdf"
+ },
+ "source_urls": [
+  "https://saiyou.jbic.go.jp/newgrad/application/",
+  "https://www.jbic.go.jp/ja/disclosure/image/publicinfo_info_houkyu2025.pdf"
+ ],
+ "fetch_errors": ["saiyou.jbic.go.jp がJS描画のため募集要項本文は未取得"]
+}

@@ -1,0 +1,32 @@
+{
+ "slug": "shohishacho",
+ "name": "消費者庁",
+ "kind": "省庁",
+ "category": "外局（内閣府）",
+ "fetched_at": "2026-08-21",
+ "target_faculty": null,
+ "tracks": [
+  {
+   "name": "総合職",
+   "conditions": "国家公務員採用総合職試験合格者を対象に官庁訪問を実施（2027年度採用の官庁訪問案内を公表、予約受付は6月9日17時まで）。",
+   "overview": "人事院「府省等別採用予定数及び官庁訪問窓口一覧（2027年度採用）」における採用予定数は5名。",
+   "timing": "官庁訪問を経て採用。"
+  },
+  {
+   "name": "一般職（大卒程度）",
+   "conditions": "国家公務員採用一般職試験（大卒程度）合格者を対象に官庁訪問を実施（2027年度採用の案内を公表）。",
+   "overview": null,
+   "timing": null
+  }
+ ],
+ "notes": [
+  "消費者庁サイトはクローラーからのアクセスが拒否されたため（403）、詳細は取得できていない。採用予定数は人事院の一覧PDFに基づく。"
+ ],
+ "salary_ref": "common",
+ "source_urls": [
+  "https://www.jinji.go.jp/content/000015294.pdf",
+  "https://www.caa.go.jp/notice/entry/046285",
+  "https://www.caa.go.jp/notice/entry/046661"
+ ],
+ "fetch_errors": ["caa.go.jp が 403 を返すため公式ページ本文は未取得"]
+}

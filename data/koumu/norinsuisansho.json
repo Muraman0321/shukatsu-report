@@ -1,0 +1,44 @@
+{
+ "slug": "norinsuisansho",
+ "name": "農林水産省",
+ "kind": "省庁",
+ "category": "府省",
+ "fetched_at": "2026-08-21",
+ "target_faculty": null,
+ "tracks": [
+  {
+   "name": "総合職（事務系・技術系）",
+   "conditions": "国家公務員採用総合職試験合格者を対象に官庁訪問を実施。",
+   "overview": "人事院「府省等別採用予定数及び官庁訪問窓口一覧（2027年度採用）」における農林水産省の採用予定数は事務系128名・技術系41名（同一覧の記載による）。",
+   "timing": "官庁訪問を経て採用。"
+  },
+  {
+   "name": "一般職（行政・技術系）",
+   "conditions": "国家公務員採用一般職試験（大卒程度・高卒者）合格者。",
+   "overview": "本省および地方農政局等で採用。",
+   "timing": null
+  },
+  {
+   "name": "林野庁（総合職技術系・一般職）",
+   "conditions": "国家公務員採用総合職試験・一般職試験（大卒程度・高卒者、技術系・行政・事務）合格者。",
+   "overview": "森林・林業行政、国有林の管理経営等を担う。夏期森林管理局就業体験実習（インターンシップ）も実施。",
+   "timing": "総合職官庁訪問は2026年5月実施予定、一般職は2026年8月31日予定（林野庁採用ページの記載）。第1次試験合格後に本府省合同業務説明会あり。"
+  },
+  {
+   "name": "水産庁（総合職・一般職・船舶職員等）",
+   "conditions": "総合職（水産技術系・工学系）、一般職相当（水産系）、一般職（行政系・機電系・土木建築等）の各試験合格者。船舶職員の採用もあり。",
+   "overview": "水産資源の管理、漁業取締り等を担う。",
+   "timing": null
+  }
+ ],
+ "notes": [
+  "係長級選考採用（通訳・行政・水産技術・工学）、経験者採用試験（係長級（技術））も別途実施。農林水産省新卒採用サイト（careers.maff.go.jp）はリダイレクト過多、一般職採用案内ページ（maff.go.jp）は403でクローラーから取得できず。"
+ ],
+ "salary_ref": "common",
+ "source_urls": [
+  "https://www.rinya.maff.go.jp/j/kanri/saiyou/",
+  "https://www.jfa.maff.go.jp/j/recruit/",
+  "https://www.jinji.go.jp/content/000015294.pdf"
+ ],
+ "fetch_errors": ["careers.maff.go.jp（リダイレクト過多）", "www.maff.go.jp/j/joinus/recruit/2gi_3gi/（403）"]
+}

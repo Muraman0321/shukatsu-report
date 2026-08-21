@@ -1,0 +1,49 @@
+{
+  "fetched_at": "2026-08-21",
+  "seido": {
+    "exam_system": "国家公務員（一般行政部門）の新卒採用は、人事院が実施する採用試験（総合職試験〔院卒者・大卒程度〕、一般職試験〔大卒程度・高卒者・社会人〕、専門職試験〔国税専門官・財務専門官・労働基準監督官・航空管制官・法務省専門職員・皇宮護衛官・刑務官・食品衛生監視員・海上保安官等〕）の合格後、各府省への「官庁訪問」を経て内定する仕組み。試験合格＝採用ではなく、採用は各府省が官庁訪問を通じて決定する。",
+    "source_urls": [
+      "https://www.jinji.go.jp/saiyo/saiyo/sougou/saiyo_sougou02.html",
+      "https://www.jinji.go.jp/saiyo/saiyo/ippan/saiyo_ippan02.html",
+      "https://www.jinji.go.jp/saiyo/saiyo/senmon/saiyo_senmon02.html",
+      "https://www.jinji.go.jp/content/000017079.pdf"
+    ]
+  },
+  "kyuyo": {
+    "shoninkyu_hompusho": {
+      "label": "初任給（行政職(一)・本府省内部部局等配属の場合、令和8年4月1日現在）",
+      "sougou_inso": "317,520円/月",
+      "sougou_daisotsu": "301,200円/月",
+      "ippan_daisotsu": "287,600円/月",
+      "ippan_kousotsu": "249,560円/月",
+      "source": "内閣人事局「国家公務員の給与（令和8年版）」",
+      "source_url": "https://www.cas.go.jp/jp/gaiyou/jimu/jinjikyoku/pdf/r08_kyuyo.pdf"
+    },
+    "gyousei1_heikin": {
+      "label": "行政職俸給表(一)適用職員の平均給与月額・平均年齢",
+      "heikin_getsugaku": "414,480円",
+      "heikin_nenrei": "41.9歳",
+      "source_url": "https://www.cas.go.jp/jp/gaiyou/jimu/jinjikyoku/pdf/r08_kyuyo.pdf"
+    },
+    "model_kyuyo": {
+      "label": "モデル給与例（令和7年度、内閣人事局資料）",
+      "rows": [
+        {"post": "地方機関係長（35歳）", "getsugaku": "301,600円", "nenkan": "5,066,000円"},
+        {"post": "本府省係長（28歳）", "getsugaku": "355,860円", "nenkan": "5,884,000円"},
+        {"post": "本府省課長補佐（35歳）", "getsugaku": "489,360円", "nenkan": "8,186,000円"},
+        {"post": "本府省課長（50歳）", "getsugaku": "857,720円", "nenkan": "14,473,000円"},
+        {"post": "事務次官", "getsugaku": "1,520,600円", "nenkan": "25,239,000円"}
+      ],
+      "source_url": "https://www.cas.go.jp/jp/gaiyou/jimu/jinjikyoku/pdf/r08_kyuyo.pdf"
+    },
+    "r8_kankoku": {
+      "label": "令和8年人事院勧告（2026年8月7日勧告・実施には給与法改正が必要）",
+      "points": "月例給の官民較差15,056円（3.51%）の引上げを勧告。改定後の俸給ベース初任給は総合職（大卒程度）251,500円・一般職（大卒程度）241,500円・一般職（高卒者）209,800円。特別給（ボーナス）は年間4.70月分へ0.05月引上げ。",
+      "source_urls": [
+        "https://www.jinji.go.jp/seisaku/kankoku/archive/r8/r8_top.html",
+        "https://www.jinji.go.jp/content/000017812.pdf"
+      ]
+    }
+  },
+  "caveat": "初任給・給与は俸給表と勤務地・配属（地域手当等）で決まり、府省による差は原則ない。府省別ページの給与欄はこの共通データを参照する。"
+}
