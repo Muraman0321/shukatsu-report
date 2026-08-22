@@ -487,50 +487,107 @@
     root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
   }
 
-  // ---- 新卒の採用枠（企業ページに実行時で差し込む） ----
+  // ---- 新卒の採用枠（企業ページに実行時で差し込む） v2（新デザイン対応） ----
   // HTMLには焼き込まない。data/saiyo.json をスラッグで引いて、見つかった会社だけ
-  // 「公式サイト・採用ページへの導線」(.extlinks) の直後にセクションを追加する。
+  // 挿入先を #kihon（基本データ）直前 → <main> 先頭 → .extlinks 直後（旧デザイン互換）
+  // の順にフォールバック探索してセクションを追加する。
   // データが増えても data/saiyo.json を更新するだけで全ページに反映される
   // （企業ページ1,500枚超を再生成しなくてよい）。
+  var SAIYO_FIELD_LABEL = { conditions: "条件", overview: "概要", timing: "時期" };
+
+  function saiyoEsc(x) {
+    return String(x).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function buildSaiyoSectionHTML(s) {
+    var order = ["conditions", "overview", "timing"];
+
+    var tracks = s.tracks.map(function (t) {
+      var present = order.filter(function (k) { return t[k]; });
+      var lead = present[0] || null;
+      var rest = present.slice(1);
+
+      var leadHtml = lead
+        ? '<p class="saiyo-field"><b>' + SAIYO_FIELD_LABEL[lead] + "：</b>" + saiyoEsc(t[lead]) + "</p>"
+        : "";
+
+      var moreHtml = "";
+      if (rest.length) {
+        var fields = rest.map(function (k) {
+          return '<p class="saiyo-field"><b>' + SAIYO_FIELD_LABEL[k] + "：</b>" + saiyoEsc(t[k]) + "</p>";
+        }).join("");
+        var label = rest.map(function (k) { return SAIYO_FIELD_LABEL[k]; }).join("・") + "を見る";
+        moreHtml = '<details class="saiyo-more"><summary>' + label + "</summary>" + fields + "</details>";
+      }
+
+      return '<div class="saiyo-track"><h3>' + saiyoEsc(t.name) + "</h3>" + leadHtml + moreHtml + "</div>";
+    }).join("");
+
+    var faculty = s.target_faculty ? "　対象：" + saiyoEsc(s.target_faculty) : "";
+
+    var notes = (s.notes || []).map(function (n) { return "<li>" + saiyoEsc(n) + "</li>"; }).join("");
+    var notesHtml = notes ? '<ul class="saiyo-notes">' + notes + "</ul>" : "";
+
+    var srcs = (s.source_urls || []).map(function (u) {
+      var host = "";
+      try { host = new URL(u).hostname; } catch (e) { host = u; }
+      return '<a href="' + saiyoEsc(u) + '" rel="nofollow noopener" target="_blank">' + saiyoEsc(host) + "</a>";
+    }).join(" ");
+
+    return (
+      '<div class="saiyo-head"><h2>新卒の採用枠</h2>' +
+      '<span class="saiyo-badge">出典：公式採用ページ（有価証券報告書ではありません）</span></div>' +
+      '<p class="saiyo-lead">公式の採用ページに書かれていた内容だけを要約しています。' + faculty + "</p>" +
+      '<div class="saiyo-tracks">' + tracks + "</div>" +
+      notesHtml +
+      '<p class="caveat">採用ページ（' + srcs + "）を" + saiyoEsc(s.fetched_at || "") + "時点でこのセッションが読み、" +
+      "書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>"
+    );
+  }
+
+  function injectSaiyoSection(s) {
+    if (!s || !s.tracks || !s.tracks.length) return;
+    if (document.getElementById("saiyo")) return; // 二重挿入ガード
+
+    var section = document.createElement("section");
+    section.id = "saiyo";
+    section.className = "saiyo-section";
+    section.innerHTML = buildSaiyoSectionHTML(s);
+
+    var kihon = document.getElementById("kihon");
+    var mainEl = document.querySelector("main");
+    var ext = document.querySelector(".extlinks");
+    if (kihon && kihon.parentNode) {
+      kihon.parentNode.insertBefore(section, kihon);       // 新デザイン：基本データの直前（冒頭）
+    } else if (mainEl) {
+      mainEl.insertBefore(section, mainEl.firstChild);      // フォールバック：main 先頭
+    } else if (ext) {
+      ext.insertAdjacentElement("afterend", section);       // 旧デザイン互換
+    } else {
+      return;
+    }
+
+    // sticky ナビに「採用枠」タブを追加（新デザインのみ：#kihon タブの存在で判定）
+    var tab = document.querySelector('a[href="#kihon"]');
+    if (tab && !document.querySelector('a[href="#saiyo"]')) {
+      var t2 = tab.cloneNode(false); // 属性（インラインstyle含む）ごと複製し、見た目を揃える
+      t2.href = "#saiyo";
+      t2.textContent = "採用枠";
+      tab.parentNode.insertBefore(t2, tab);
+    }
+  }
+
   function initSaiyoInject() {
-    var anchor = document.querySelector(".extlinks");
-    if (!anchor) return;                            // 公式サイト情報が無い会社は対象外
     var m = /\/kigyou\/([^/]+)\.html/.exec(location.pathname);
     var slug = m ? m[1] : null;
     if (!slug) return;
 
-    var FIELD_LABEL = { conditions: "条件", overview: "概要", timing: "時期" };
-
-    fetch(base + "data/saiyo.json").then(function (r) { return r.json(); }).then(function (all) {
-      var s = all[slug];
-      if (!s || !s.tracks || !s.tracks.length) return;
-
-      var tracks = s.tracks.map(function (t) {
-        var fields = ["conditions", "overview", "timing"].map(function (k) {
-          if (!t[k]) return "";
-          return '<p class="saiyo-field"><b>' + FIELD_LABEL[k] + '：</b>' + esc(t[k]) + "</p>";
-        }).join("");
-        return '<div class="saiyo-track"><h3>' + esc(t.name) + "</h3>" + fields + "</div>";
-      }).join("");
-
-      var notes = (s.notes || []).map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("");
-      var notesHtml = notes ? '<ul class="saiyo-notes">' + notes + "</ul>" : "";
-
-      var srcs = (s.source_urls || []).map(function (u) {
-        var host = "";
-        try { host = new URL(u).hostname; } catch (e) { host = u; }
-        return '<a href="' + esc(u) + '" rel="nofollow noopener" target="_blank">' + esc(host) + "</a>";
-      }).join(" ");
-
-      var section = document.createElement("section");
-      section.innerHTML =
-        "<h2>新卒の採用枠</h2>" +
-        '<div class="saiyo-tracks">' + tracks + "</div>" +
-        notesHtml +
-        '<p class="caveat">採用ページ（' + srcs + "）を" + esc(s.fetched_at || "") + "時点でこのセッションが読み、" +
-        "書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>";
-      anchor.insertAdjacentElement("afterend", section);
-    }).catch(function () { /* データ取得に失敗しても他の表示は止めない */ });
+    fetch(base + "data/saiyo.json")
+      .then(function (r) { return r.json(); })
+      .then(function (all) { injectSaiyoSection(all[slug]); })
+      .catch(function () { /* データ取得に失敗しても他の表示は止めない */ });
   }
 
   // ---- 業界ショーケース（トップページ：横に流れる企業帯） ----
@@ -710,6 +767,110 @@
     onScroll();
   }
 
+  // ---- トップページ：ヒーローカルーセル（注目企業、自動送り＋矢印） ----
+  function initHeroCarousel() {
+    var track = document.getElementById("hero-carousel");
+    if (!track) return;
+    var wrap = track.closest(".hero-carousel-wrap");
+    var prevBtn = wrap.querySelector(".hero-car-prev");
+    var nextBtn = wrap.querySelector(".hero-car-next");
+    var paused = false, resumeT = null, raf = null, timer = null;
+
+    function half() {
+      var kids = track.children;
+      if (!kids.length) return 0;
+      var mid = kids[Math.floor(kids.length / 2)];
+      return mid ? mid.offsetLeft - kids[0].offsetLeft : track.scrollWidth / 2;
+    }
+
+    function step(dir) {
+      var kids = track.children;
+      if (!kids.length) return;
+      var w = kids[0].offsetWidth + 14;
+      var h = half();
+      cancelAnimationFrame(raf);
+      if (dir < 0 && track.scrollLeft < w) track.scrollLeft += h;
+      var target = track.scrollLeft + dir * w;
+      var best = null;
+      for (var i = 0; i < kids.length; i++) {
+        var off = kids[i].offsetLeft - kids[0].offsetLeft;
+        if (best === null || Math.abs(off - target) < Math.abs(best - target)) best = off;
+      }
+      if (best !== null) target = best;
+      var from = track.scrollLeft, dist = target - from, dur = 900, t0 = performance.now();
+      function tick(now) {
+        var t = Math.min(1, (now - t0) / dur);
+        var eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        track.scrollLeft = from + dist * eased;
+        if (t < 1) { raf = requestAnimationFrame(tick); }
+        else if (track.scrollLeft >= h) { track.scrollLeft -= h; }
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    function stopAuto() { if (timer) clearInterval(timer); timer = null; }
+    function startAuto() {
+      stopAuto();
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      timer = setInterval(function () { if (!paused) step(1); }, 3000);
+    }
+    function pauseFor(ms) {
+      paused = true;
+      clearTimeout(resumeT);
+      resumeT = setTimeout(function () { paused = false; }, ms);
+    }
+
+    if (prevBtn) prevBtn.addEventListener("click", function () { pauseFor(4000); step(-1); });
+    if (nextBtn) nextBtn.addEventListener("click", function () { pauseFor(4000); step(1); });
+    wrap.addEventListener("mouseenter", function () { paused = true; clearTimeout(resumeT); });
+    wrap.addEventListener("mouseleave", function () { paused = false; });
+    wrap.addEventListener("touchstart", function () { paused = true; clearTimeout(resumeT); }, { passive: true });
+    wrap.addEventListener("touchend", function () { pauseFor(2500); }, { passive: true });
+
+    startAuto();
+  }
+
+  // ---- 企業ページ：規模の近い同業他社テーブルの列ソート ----
+  function initPeerSort() {
+    var table = document.getElementById("cp-peer-table");
+    if (!table) return;
+    var tbody = table.querySelector("tbody");
+    var btns = table.querySelectorAll(".cp-sort-btn");
+    var state = { key: "emp", dir: -1 };
+
+    function apply() {
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+      rows.sort(function (a, b) {
+        var aCell = a.querySelector('td[data-key="' + state.key + '"]');
+        var bCell = b.querySelector('td[data-key="' + state.key + '"]');
+        var av = aCell && aCell.dataset.val !== "" ? parseFloat(aCell.dataset.val) : null;
+        var bv = bCell && bCell.dataset.val !== "" ? parseFloat(bCell.dataset.val) : null;
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return state.dir < 0 ? bv - av : av - bv;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+      btns.forEach(function (b) {
+        var on = b.dataset.key === state.key;
+        b.classList.toggle("is-active", on);
+        var arrow = b.querySelector(".cp-sort-arrow");
+        if (arrow) arrow.textContent = on ? (state.dir < 0 ? " ↓" : " ↑") : "";
+      });
+    }
+
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = b.dataset.key;
+        if (state.key === key) state.dir = -state.dir;
+        else { state.key = key; state.dir = -1; }
+        apply();
+      });
+    });
+
+    apply();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSearch();
     initCompare();
@@ -717,6 +878,8 @@
     initTekisei();
     initSaiyoInject();
     initShowcase();
+    initHeroCarousel();
+    initPeerSort();
     initReveal();
     initChrome();
   });

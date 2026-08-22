@@ -307,7 +307,6 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
     </svg>
     <span class="brand-word">{e(SITE_NAME)}</span>
   </a>
-  <span class="tagline">{e(TAGLINE)}</span>
   <nav class="header-nav"><a href="{up}shindan.html">就活の軸診断</a><a href="{up}tekisei.html">学部・興味から絞る</a><a href="{up}ranking/index.html">ランキング</a><a href="{up}koumu/index.html">官公庁・政府系</a><a href="{up}hikaku.html">企業を選んで比較する →</a></nav>
   {search_box("header")}
 </header>
@@ -748,77 +747,325 @@ def financial_section(c: dict) -> str:
 </section>"""
 
 
-def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> str:
+def peer_rank(c: dict, pool: list[dict], key: str, ascending: bool = False) -> tuple[int | None, int]:
+    """指定した指標でpool内のcの順位（1始まり）と、値のある会社数を返す。
+    値がNoneの会社は順位付けの対象外（sort_key()と同じ規約で末尾に落ちる）。
+    """
+    ranked = sorted(pool, key=lambda x: sort_key(x["latest"]["reporting_company"][key], not ascending))
+    total = sum(1 for x in pool if x["latest"]["reporting_company"][key] is not None)
+    for i, x in enumerate(ranked, start=1):
+        if x["edinet_code"] == c["edinet_code"]:
+            return (i if i <= total else None), total
+    return None, total
+
+
+def metric_card(c: dict, peers: list[dict], companies: list[dict], key: str, label: str,
+                 fmt_display, ascending: bool = False, rank_suffix: str = "", sub_fn=None) -> dict:
+    """基本データカード1枚ぶんの数値・バー%・業界内順位・全体パーセンタイルを計算する。
+    業界内順位はpeers（同業他社、自分を含む）、全体パーセンタイルはcompanies（全社）が基準。
+    """
+    v = c["latest"]["reporting_company"][key]
+    if v is None:
+        return {"label": label, "display": NA, "sub": "", "bar_pct": "1.5%", "rank_label": "", "pct_label": ""}
+    rank_g, total_g = peer_rank(c, peers, key, ascending)
+    rank_o, total_o = peer_rank(c, companies, key, ascending)
+    group_vals = [x["latest"]["reporting_company"][key] for x in peers
+                  if x["latest"]["reporting_company"][key] is not None]
+    m = max(group_vals) if group_vals else v
+    bar_pct = max(1.5, min(100.0, v / m * 100)) if m else 1.5
+    rank_label = f"{c['peer_group']}{total_g}社中{rank_g}位{rank_suffix}" if rank_g else ""
+    pct_label = f"全体上位{rank_o / total_o * 100:.1f}%" if rank_o else ""
+    return {
+        "label": label, "display": fmt_display(v), "sub": sub_fn(v) if sub_fn else "",
+        "bar_pct": f"{bar_pct:.1f}%", "rank_label": rank_label, "pct_label": pct_label,
+    }
+
+
+def identity_box(icon: str | None, initial: str, size: int) -> str:
+    """企業ロゴ。実物のアイコンが無ければ頭文字1文字のフォールバックにする。"""
+    if icon:
+        inner = f'<img src="{e(icon)}" alt="" width="{size - 32}" height="{size - 32}" style="width:{size - 32}px;height:{size - 32}px;object-fit:contain">'
+    else:
+        inner = e(initial)
+    return f'<div class="cp-logo" style="width:{size}px;height:{size}px;font-size:{size * 0.36:.0f}px">{inner}</div>'
+
+
+def ring_style(pct_value: float | None, color: str) -> str:
+    if pct_value is None:
+        return "background:conic-gradient(#eef0f4 0 100%)"
+    clamped = max(0.0, min(pct_value, 100.0))
+    return f"background:conic-gradient({color} 0 {clamped:.1f}%,#eef0f4 {clamped:.1f}% 100%)"
+
+
+def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str, newest: dt.date) -> str:
     L = c["latest"]
     emp, rc, div = L["employees"], L["reporting_company"], L["diversity"]
     src = L["source"]
     period = src["period_end"][:7]
+    gslug = GROUP_SLUG.get(c["peer_group"], c["peer_group"])
+    initial = c["short"][0] if c["short"] else "?"
 
-    rows = [
-        ("平均年間給与", f'<b>{yen(rc["average_annual_salary_yen"])}</b>（{man(rc["average_annual_salary_yen"])}）'),
-        ("平均年齢", dec1(rc["average_age_years"], "歳")),
-        ("平均勤続年数", dec1(rc["average_tenure_years"], "年")),
-        ("従業員数（提出会社・単体）", num(emp["reporting_company"], "人")),
-        ("従業員数（連結）", num(emp["consolidated"], "人")),
+    # ---- 企業アイデンティティ帯 ----
+    links = c.get("links") or {}
+    official = links.get("official")
+    recruit = links.get("recruit")
+    saiyo_urls = (c.get("saiyo") or {}).get("source_urls") or []
+    recruit_effective = recruit or (saiyo_urls[0] if saiyo_urls else None)
+    actions = []
+    if official:
+        host = urllib.parse.urlsplit(official).netloc.removeprefix("www.")
+        actions.append(
+            f'<a class="cp-official" href="{e(official)}" rel="nofollow noopener" target="_blank">'
+            f'公式サイト<span class="cp-action-host">{e(host)}</span></a>'
+        )
+        if recruit_effective:
+            rhost = urllib.parse.urlsplit(recruit_effective).netloc.removeprefix("www.")
+            actions.append(
+                f'<a class="cp-recruit" href="{e(recruit_effective)}" rel="nofollow noopener" target="_blank">'
+                f'採用ホームページ<span class="cp-action-host">{e(rhost)}</span></a>'
+            )
+        else:
+            actions.append('<p class="cp-recruit-note">採用ページは見つけられませんでした。</p>')
+    actions.append(
+        f'<a class="cp-compare-cta" href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}{len(peers)}社を比較する →</a>'
+    )
+
+    identity = f"""<div class="cp-identity">
+<div class="cp-identity-inner">
+<nav class="cp-crumb"><a href="../index.html">トップ</a> › <a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a> › {e(c["short"])}</nav>
+<div class="cp-identity-row">
+{identity_box(c["icon"], initial, 84)}
+<div class="cp-identity-body">
+<h1>{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
+<div class="cp-identity-badges">
+<a class="cp-group-badge" href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a>
+<span class="cp-identity-meta">業種：{e(c["industry"])}</span>
+<span class="cp-identity-meta">証券コード {e(c["sec_code"][:4])}</span>
+<span class="cp-identity-meta">／ {e(period)}期</span>
+</div>
+</div>
+<div class="cp-identity-actions">{"".join(actions)}</div>
+</div>
+</div>
+</div>"""
+
+    # ---- sticky sub-nav（採用枠タブはJS側 initSaiyoInject が該当会社だけ動的追加） ----
+    sections = [
+        ("基本データ", "#kihon"), ("給与の推移", "#suii"), ("多様性の指標", "#tayosei"),
+        ("同業他社と比較", "#hikaku"), ("出典", "#shutten"),
     ]
-    basic = "".join(f'<tr><th scope="row">{e(k)}</th><td>{v}</td></tr>' for k, v in rows)
+    subnav = '<div class="cp-subnav"><div class="cp-subnav-inner">' + "".join(
+        f'<a href="{href}">{e(label)}</a>' for label, href in sections
+    ) + "</div></div>"
 
-    # 提出会社の多様性指標が1つも無い＝持株会社が本体の指標を開示していない。
-    # 「非公表」だけの表を5行並べても情報がないので、そう書いて子会社へ送る。
+    # ---- 基本データ（3指標カード＋従業員数カード） ----
+    salary_card = metric_card(c, peers, companies, "average_annual_salary_yen", "平均年間給与", man, sub_fn=yen)
+    tenure_card = metric_card(c, peers, companies, "average_tenure_years", "平均勤続年数",
+                               lambda v: dec1(v, "年"))
+    age_card = metric_card(c, peers, companies, "average_age_years", "平均年齢",
+                            lambda v: dec1(v, "歳"), ascending=True, rank_suffix="（若い順）")
+
+    def _metric_card_html(m: dict) -> str:
+        badges = ""
+        if m["rank_label"]:
+            badges = f'<span class="cp-metric-rank">{e(m["rank_label"])}</span>'
+            if m["pct_label"]:
+                badges += f'<span class="cp-metric-pct">{e(m["pct_label"])}</span>'
+        sub = f'<div class="cp-metric-sub">{e(m["sub"])}</div>' if m["sub"] else ""
+        return f"""<div class="cp-card cp-metric-card">
+<div class="cp-metric-label">{e(m["label"])}</div>
+<div class="cp-metric-value">{m["display"]}</div>
+{sub}
+<div class="cp-metric-bar"><div class="cp-metric-bar-fill" style="width:{m["bar_pct"]}"></div></div>
+<div class="cp-metric-badges">{badges}</div>
+</div>"""
+
+    emp_card = f"""<div class="cp-card cp-metric-card">
+<div class="cp-metric-label">従業員数</div>
+<div class="cp-metric-value">{num(emp["reporting_company"], "人")}</div>
+<div class="cp-metric-sub">提出会社（単体）</div>
+<div class="cp-emp-divider"></div>
+<div class="cp-metric-value cp-metric-value-sm">{num(emp["consolidated"], "人")}</div>
+<div class="cp-metric-sub">連結</div>
+</div>"""
+
+    kihon_section = f"""<section id="kihon" class="cp-section">
+<h2>基本データ（{e(period)}期・提出会社）</h2>
+<p class="cp-lead">同じ業種の中での位置と、{len(companies)}社全体での位置を併記しています。</p>
+<div class="cp-metrics">{_metric_card_html(salary_card)}{_metric_card_html(tenure_card)}{_metric_card_html(age_card)}{emp_card}</div>
+<details class="cp-details"><summary>この数字の読み方<span class="cp-details-hint">（平均年間給与の分母について）</span></summary>
+<p>{SALARY_CAVEAT}</p></details>
+</section>"""
+
+    # ---- 平均年間給与の推移 ----
+    items = sorted(c["trend"]["average_annual_salary_yen"].items())
+    trend_up, trend_range_label, trend_delta, trend_abs, trend_years = True, "", "—", "", ""
+    if len(items) > 1 and c["salary_trend_comparable"]:
+        (k0, v0), (k1, v1) = items[0], items[-1]
+        pct_delta = (v1 / v0 - 1) * 100
+        trend_up = pct_delta >= 0
+        trend_range_label = f"{e(k0[:7])}期 → {e(k1[:7])}期"
+        trend_delta = f"{'+' if trend_up else ''}{pct_delta:.1f}%"
+        trend_abs = f"{'+' if trend_up else '−'}{abs(round((v1 - v0) / 10000)):,}万円"
+        trend_years = f"{len(items)}期分"
+    comparable_note = (
+        "算定基準が変わった年があるため、年ごとの単純比較はできません。"
+        if not c["salary_trend_comparable"] else "各年の有価証券報告書の記載値です。"
+    )
+    trend_color = "#1b7f5f" if trend_up else "#b4443a"
+    trend_bg = "linear-gradient(140deg,#eaf7f1,#dff0e8)" if trend_up else "linear-gradient(140deg,#fdeeec,#f9e3e0)"
+    trend_border = "#c3e6d5" if trend_up else "#f0cdc7"
+    trend_arrow = "↗" if trend_up else "↘"
+
+    suii_section = f"""<section id="suii" class="cp-section">
+<h2>平均年間給与の推移</h2>
+<div class="cp-trend">
+<div class="cp-trend-info" style="background:{trend_bg};border-color:{trend_border}">
+<div class="cp-trend-range">{trend_range_label}</div>
+<div class="cp-trend-delta" style="color:{trend_color}">{trend_delta}<span class="cp-trend-arrow">{trend_arrow if trend_delta != "—" else ""}</span></div>
+<div class="cp-trend-abs" style="color:{trend_color}">{trend_abs}</div>
+<div class="cp-trend-note">有報{trend_years}の記載値の差。</div>
+</div>
+<div class="cp-card cp-trend-chart">{line_chart(c["trend"]["average_annual_salary_yen"], man)}</div>
+</div>
+<p class="caveat">単位は万円。{e(comparable_note)}</p>
+<h3>従業員数（提出会社）の推移</h3>
+{line_chart(c["trend"]["employees_reporting_company"], lambda v: num(v, "人"))}
+</section>"""
+
+    # ---- 多様性の指標 ----
     div_keys = ["female_manager_ratio", "female_to_male_wage_ratio_all", "female_to_male_wage_ratio_regular",
                 "female_to_male_wage_ratio_nonregular", "male_childcare_leave_ratio"]
     div_empty = all(div.get(k) is None for k in div_keys)
     if div_empty:
         to_subs = (
-            '実際の勤務先となる<a href="#subsidiaries">連結子会社の指標</a>を参照してください。'
+            '実際の勤務先となる<a href="#hikaku">同業他社の指標</a>を参照してください。'
             if L.get("subsidiaries") else ""
         )
-        diversity_section = f"""<section>
+        tayosei_section = f"""<section id="tayosei" class="cp-section">
 <h2>多様性の指標</h2>
 <p class="note">提出会社（{e("持株会社本体" if c.get("is_holding") else "本体")}）の女性管理職比率・男女の賃金の差異・男性育休取得率は、
 有価証券報告書に記載がありません。{to_subs}</p>
 </section>"""
     else:
-        div_rows = [
-            ("女性管理職比率", pct(div["female_manager_ratio"])),
-            ("男女の賃金の差異（全労働者）", pct(div["female_to_male_wage_ratio_all"])),
-            ("　うち正規雇用労働者", pct(div["female_to_male_wage_ratio_regular"])),
-            ("　うち非正規雇用労働者", pct(div["female_to_male_wage_ratio_nonregular"])),
-            ("男性育休取得率", childcare_cell(div["male_childcare_leave_ratio"], div["male_childcare_leave_method"])),
-        ]
-        diversity = "".join(f'<tr><th scope="row">{e(k)}</th><td>{v}</td></tr>' for k, v in div_rows)
         scope = div.get("scope") or "提出会社"
         scope_note = "" if scope == "提出会社" else f'<p class="small">対象範囲：{e(scope)}</p>'
-
-        childcare_ratio = div["male_childcare_leave_ratio"]
-        childcare_pct = childcare_ratio * 100 if childcare_ratio is not None else None
-        method_tag = ""
+        method_tag = None
         if div["male_childcare_leave_method"]:
-            tag = "第2号方式" if "2号" in div["male_childcare_leave_method"] else "原則方式"
-            mcls = "method2" if tag == "第2号方式" else "method1"
-            method_tag = f'<span class="method {mcls} donut-method">{tag}</span>'
-        donuts = f"""<div class="donuts">
-<div class="donut-item">{donut(div["female_manager_ratio"] * 100 if div["female_manager_ratio"] is not None else None)}
-<div class="donut-label">女性管理職比率</div></div>
-<div class="donut-item">{donut(div["female_to_male_wage_ratio_all"] * 100 if div["female_to_male_wage_ratio_all"] is not None else None)}
-<div class="donut-label">男女の賃金の差異<br>（全労働者）</div></div>
-<div class="donut-item">{donut(childcare_pct)}
-<div class="donut-label">男性育休取得率{method_tag}</div></div>
+            method_tag = "第2号方式" if "2号" in div["male_childcare_leave_method"] else "原則方式"
+        fm, wr, cc = div["female_manager_ratio"], div["female_to_male_wage_ratio_all"], div["male_childcare_leave_ratio"]
+        diversity_items = [
+            ("女性管理職比率", fm, "#2f4bd6", "提出会社（単体）の管理職に占める女性の割合。", None),
+            ("男女の賃金の差異（全労働者）", wr, "#5570e6", "男性の賃金を100としたときの女性の賃金の割合。", None),
+            ("育児休業取得率（男性）", cc, "#1b7f5f",
+             "当期に配偶者が出産した男性のうち、取得した男性の割合。" if cc is not None else "この企業の有報からは未取得です。",
+             method_tag),
+        ]
+        cards = []
+        for label, v, color, note, tag in diversity_items:
+            value_html = "未取得" if v is None and "育児" in label else (NA if v is None else pct(v))
+            tag_html = f'<span class="cp-diversity-tag">{e(tag)}</span>' if tag else ""
+            cards.append(f"""<div class="cp-card cp-diversity-card">
+<div class="cp-ring" style="{ring_style(v * 100 if v is not None else None, color)}">
+<div class="cp-ring-inner{"" if v is not None else " cp-ring-inner-na"}">{value_html}</div></div>
+<div class="cp-diversity-body">
+<div class="cp-diversity-head"><span class="cp-diversity-label">{e(label)}</span>{tag_html}</div>
+<div class="cp-diversity-note">{e(note)}</div>
+</div>
+</div>""")
+        div_trend = ""
+        if c["trend"].get("female_manager_ratio") or c["trend"].get("female_to_male_wage_ratio_all"):
+            div_trend = f"""<div class="cols">
+<div class="col"><h3>女性管理職比率</h3>{line_chart(c["trend"].get("female_manager_ratio", {}), pct)}</div>
+<div class="col"><h3>男女の賃金の差異（全労働者）</h3>{line_chart(c["trend"].get("female_to_male_wage_ratio_all", {}), pct)}</div>
 </div>"""
-
-        diversity_section = f"""<section>
+        tayosei_section = f"""<section id="tayosei" class="cp-section">
 <h2>多様性の指標</h2>
 {scope_note}
-{donuts}
-<table class="kv">{diversity}</table>
-<p class="caveat">{WAGE_CAVEAT}</p>
-<p class="caveat">{CHILDCARE_CAVEAT}</p>
+<div class="cp-diversity">{"".join(cards)}</div>
+{div_trend}
+<details class="cp-details"><summary>この数字の読み方<span class="cp-details-hint">（男女の賃金の差異）</span></summary><p>{WAGE_CAVEAT}</p></details>
+<details class="cp-details"><summary>この数字の読み方<span class="cp-details-hint">（育児休業取得率の算出方式）</span></summary><p>{CHILDCARE_CAVEAT}</p></details>
 </section>"""
+
+    # ---- 規模の近い同業他社（連結従業員数が近い順に7社＋自社。列名クリックで並び替え） ----
+    mine = c["latest"]["employees"]["consolidated"]
+    others = [x for x in peers if x["edinet_code"] != c["edinet_code"] and x["latest"]["employees"]["consolidated"]]
+    near = sorted(others, key=lambda x: abs(x["latest"]["employees"]["consolidated"] - mine))[:7] if mine else others[:7]
+    shown = sorted([c] + near, key=lambda x: -(x["latest"]["employees"]["consolidated"] or 0))
+
+    pcols = [
+        ("emp", "従業員数(連結)", lambda x: x["latest"]["employees"]["consolidated"], lambda v: num(v, "人")),
+        ("salary", "平均年間給与", lambda x: x["latest"]["reporting_company"]["average_annual_salary_yen"], man),
+        ("tenure", "平均勤続年数", lambda x: x["latest"]["reporting_company"]["average_tenure_years"],
+         lambda v: dec1(v, "年")),
+        ("fm", "女性管理職比率", lambda x: x["latest"]["diversity"]["female_manager_ratio"], pct),
+    ]
+    maxes = {}
+    for key, _, get, _ in pcols:
+        vals = [get(x) for x in shown if get(x) is not None]
+        maxes[key] = max(vals) if vals else 1
+
+    head_cells = "".join(
+        f'<th class="cp-ptable-th"><button type="button" class="cp-sort-btn" data-key="{key}">{e(label)}'
+        f'<span class="cp-sort-arrow"></span></button></th>'
+        for key, label, _, _ in pcols
+    )
+    prows = []
+    for x in shown:
+        is_self = x["edinet_code"] == c["edinet_code"]
+        x_initial = x["short"][0] if x["short"] else "?"
+        logo = (f'<img src="{e(x["icon"])}" alt="" width="16" height="16" style="width:16px;height:16px;object-fit:contain">'
+                if x["icon"] else e(x_initial))
+        self_badge = ' <span class="cp-self-badge">この会社</span>' if is_self else ""
+        name_html = e(x["short"]) if is_self else f'<a href="{e(x["slug"])}.html">{e(x["short"])}</a>'
+        cells = []
+        for key, _, get, fmt in pcols:
+            v = get(x)
+            width = max(1.5, min(100.0, (v / maxes[key] * 100))) if v is not None and maxes[key] else 0.0
+            fill_cls = "cp-bar-self" if is_self else "cp-bar-other"
+            cells.append(
+                f'<td class="cp-ptable-td" data-key="{key}" data-val="{v if v is not None else ""}">'
+                f'<div class="cp-cell-val{"" if v is not None else " cp-cell-na"}">{fmt(v)}</div>'
+                f'<div class="cp-bar-track"><div class="cp-bar-fill {fill_cls}" style="width:{width:.1f}%"></div></div></td>'
+            )
+        prows.append(
+            f'<tr class="{"cp-row-self" if is_self else ""}">'
+            f'<th scope="row" class="cp-ptable-name"><span class="cp-row-logo">{logo}</span>{name_html}{self_badge}</th>'
+            + "".join(cells) + "</tr>"
+        )
+
+    hikaku_section = f"""<section id="hikaku" class="cp-section">
+<h2>規模の近い同業他社</h2>
+<p class="cp-lead">{e(c["peer_group"])}は{len(peers)}社あり、規模も事業もばらばらです。
+連結従業員数が{e(c["short"])}に近い順に並べています。列名をクリックすると並び替わります。</p>
+<div class="scroll"><table class="cp-ptable" id="cp-peer-table">
+<thead><tr><th class="cp-ptable-th cp-ptable-th-name">会社</th>{head_cells}</tr></thead>
+<tbody>{"".join(prows)}</tbody></table></div>
+<p class="caveat">平均年間給与・平均勤続年数・女性管理職比率は提出会社（単体）、従業員数は連結です。</p>
+</section>"""
+
+    # ---- 出典 ----
+    shutten_section = f"""<section id="shutten" class="cp-section cp-card cp-source">
+<h2>出典</h2>
+<ul>
+<li>{e(src['doc_type'])}（{e(src['period_end'])} 期）
+　── <a href="{EDINET_VIEW.format(doc_id=src['doc_id'])}" rel="nofollow">EDINETで閲覧</a>
+　／ <a href="{EDINET_PDF.format(doc_id=src['doc_id'])}" rel="nofollow">原典PDF</a></li>
+<li>提出日時 {e(src['submit_datetime'])}／書類管理番号 {e(src['doc_id'])}／当サイトのデータ取得日 {e(fetched)}</li>
+<li>ライセンス：<a href="{PDL_URL}" rel="nofollow">公共データ利用規約（PDL1.0）</a></li>
+</ul>
+<p class="processing">{e(PROCESSING_NOTICE)}</p>
+</section>"""
+
+    # ---- 既存セクション（今回の新デザインのプレビューには出てこないが、削除しない） ----
+    p = c.get("prose") or {}
+    prose_html = f'<section><h2>事業の内容</h2><p>{e(p["business"])}</p></section>' if p.get("business") else ""
 
     subs = L.get("subsidiaries") or []
     sub_html = ""
     if subs:
-        body = "".join(
+        sbody = "".join(
             f'<tr><th scope="row">{e(s["name"])}</th>'
             f'<td>{pct(s["female_manager_ratio"])}</td>'
             f'<td>{pct(s["female_to_male_wage_ratio_all"])}</td>'
@@ -830,29 +1077,11 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
 <p class="lead">持株会社は本体の指標を開示しない場合があります。実際に働く場となる事業会社の数字はこちらです。</p>
 <div class="scroll"><table class="grid">
 <thead><tr><th>会社</th><th>女性管理職比率</th><th>男女の賃金の差異（全労働者）</th><th>男性育休取得率</th></tr></thead>
-<tbody>{body}</tbody></table></div>
+<tbody>{sbody}</tbody></table></div>
 <p class="caveat">{CHILDCARE_CAVEAT}</p>
 </section>"""
 
-    salary_trend = (
-        f'<p class="rate">{change_rate(c["trend"]["average_annual_salary_yen"])}</p>'
-        if c["salary_trend_comparable"] else ""
-    )
-
-    div_trend = ""
-    if c["trend"].get("female_manager_ratio") or c["trend"].get("female_to_male_wage_ratio_all"):
-        div_trend = f"""<div class="col">
-  <h3>女性管理職比率</h3>
-  {line_chart(c["trend"].get("female_manager_ratio", {}), lambda v: pct(v))}
-</div>
-<div class="col">
-  <h3>男女の賃金の差異（全労働者）</h3>
-  {line_chart(c["trend"].get("female_to_male_wage_ratio_all", {}), lambda v: pct(v))}
-</div>"""
-
     notes = list(L.get("notes") or [])
-    # 落とした値は最新期とは限らない（荏原製作所は2024年12月期だけ）。
-    # 推移の折れ線がその年だけ欠けるので、どの期をなぜ落としたかを必ず書く
     for a in c.get("value_anomalies") or []:
         label = {"average_annual_salary_yen": "平均年間給与",
                  "average_age_years": "平均年齢",
@@ -866,98 +1095,33 @@ def company_page(c: dict, peers: list[dict], fetched: str, newest: dt.date) -> s
     notes = list(dict.fromkeys(notes))
     notes_html = ""
     if notes:
-        items = "".join(f"<li>{e(n)}</li>" for n in notes)
-        notes_html = f'<section class="notes"><h2>抽出上の注記</h2><ul>{items}</ul></section>'
-
-    p = c.get("prose") or {}
-    prose_html = ""
-    if p.get("business"):
-        prose_html = f'<section><h2>事業の内容</h2><p>{e(p["business"])}</p></section>'
+        items_html = "".join(f"<li>{e(n)}</li>" for n in notes)
+        notes_html = f'<section class="notes"><h2>抽出上の注記</h2><ul>{items_html}</ul></section>'
 
     peer_links = " ".join(
         f'<a href="{e(x["slug"])}.html">{e(x["short"])}</a>' for x in peers if x["edinet_code"] != c["edinet_code"]
     )
-    gslug = GROUP_SLUG.get(c["peer_group"], c["peer_group"])
-
-    # 規模の近い同業。33業種は粗く、165社の「情報・通信業」ではNTTと数千人の会社が同居する。
-    # 連結従業員数が近い順という機械的な基準なので、恣意的な分類を持ち込まずに済む。
-    near_html = ""
-    mine = c["latest"]["employees"]["consolidated"]
-    if mine and len(peers) > 6:
-        others = [x for x in peers
-                  if x["edinet_code"] != c["edinet_code"] and x["latest"]["employees"]["consolidated"]]
-        near = sorted(others, key=lambda x: abs(x["latest"]["employees"]["consolidated"] - mine))[:5]
-        if near:
-            shown = sorted([c] + near,
-                           key=lambda x: -(x["latest"]["employees"]["consolidated"] or 0))
-            nrows = "".join(
-                f'<tr{" class=\"self\"" if x["edinet_code"] == c["edinet_code"] else ""}>'
-                f'<th scope="row">'
-                + (f'{logo_img(x["icon"])}{e(x["short"])}' if x["edinet_code"] == c["edinet_code"]
-                   else f'<a href="{e(x["slug"])}.html">{logo_img(x["icon"])}{e(x["short"])}</a>')
-                + "</th>"
-                f'<td>{num(x["latest"]["employees"]["consolidated"], "人")}</td>'
-                f'<td>{man(x["latest"]["reporting_company"]["average_annual_salary_yen"])}</td>'
-                f'<td>{dec1(x["latest"]["reporting_company"]["average_tenure_years"], "年")}</td>'
-                f'<td>{pct(x["latest"]["diversity"]["female_manager_ratio"])}</td>'
-                f'<td class="small">{e(x["latest"]["source"]["period_end"][:7])}期</td></tr>'
-                for x in shown
-            )
-            near_html = f"""<section>
-<h2>規模の近い同業他社</h2>
-<p class="lead">{e(c["peer_group"])}は{len(peers)}社あり、規模も事業もばらばらです。
-<b>連結従業員数が{e(c["short"])}に近い順に5社</b>を並べました。分類の判断を入れず、人数の近さだけで選んでいます。</p>
-<div class="scroll"><table class="grid">
-<thead><tr><th>会社</th><th>従業員数(連結)</th><th>平均年間給与</th><th>平均勤続年数</th><th>女性管理職比率</th><th>決算期</th></tr></thead>
-<tbody>{nrows}</tbody></table></div>
-<p class="caveat">平均年間給与・平均勤続年数・女性管理職比率は提出会社（単体）、従業員数は連結です。</p>
-</section>"""
-
-    body = f"""
-<nav class="crumb"><a href="../index.html">トップ</a> › <a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}</a> › {e(c["short"])}</nav>
-
-<h1>{logo_img(c["icon"], size=28)}{e(c["short"])}の平均年収・男女の賃金の差異・従業員数</h1>
-<p class="lead">有価証券報告書（{e(period)}期）から機械的に抽出した数値です。業種：{e(c["industry"])}／証券コード {e(c["sec_code"][:4])}</p>
-{external_links(c)}
-
-{stale_note(c, newest)}
-{holding_warning(c)}
-{trend_breaks(c)}
-{prose_html}
-
-<section>
-<h2>基本データ（{e(period)}期・提出会社）</h2>
-<table class="kv">{basic}</table>
-<p class="caveat">{SALARY_CAVEAT}</p>
-</section>
-
-<section>
-<h2>平均年間給与の推移</h2>
-{salary_trend}
-{line_chart(c["trend"]["average_annual_salary_yen"], man)}
-<h3>従業員数（提出会社）の推移</h3>
-{line_chart(c["trend"]["employees_reporting_company"], lambda v: num(v, "人"))}
-</section>
-
-{diversity_section}
-
-<div class="cols">{div_trend}</div>
-
-{financial_section(c)}
-
-{near_html}
-
-{sub_html}
-{notes_html}
-
-<section class="peers">
-<h2>同業他社と比べる</h2>
-<p><a class="cta" href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}{len(peers)}社を1つの表で比較する →</a></p>
+    peers_all_html = f"""<section class="peers">
+<h2>{e(c["peer_group"])}の全社</h2>
 <p class="small">{peer_links}</p>
-</section>
+</section>""" if peer_links else ""
 
-{source_block(src, fetched)}
-"""
+    legacy_html = "\n".join(x for x in [
+        stale_note(c, newest), holding_warning(c), trend_breaks(c),
+        financial_section(c), sub_html, notes_html, peers_all_html,
+    ] if x)
+
+    body = f"""{identity}
+{subnav}
+<div class="cp-main">
+{prose_html}
+{kihon_section}
+{suii_section}
+{tayosei_section}
+{hikaku_section}
+{legacy_html}
+{shutten_section}
+</div>"""
     title = f"{c['short']}の平均年収・男女の賃金の差異｜有価証券報告書（{period}期）｜{SITE_NAME}"
     desc = (
         f"{c['short']}の平均年間給与{man_plain(L['reporting_company']['average_annual_salary_yen'])}、"
@@ -1314,35 +1478,96 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
         f'{e(first_g)}{len(first_members)}社を1つの表で比較する →</a></p>'
     )
 
-    body = f"""
-<h1>有価証券報告書の数字だけで、同業他社を並べる</h1>
-<p class="lead">
-平均年収も、男女の賃金の差異も、1社ずつなら調べれば出てきます。しかし<b>同業7社を1つの表に並べたもの</b>は、どこにもありません。
-就活情報サイトは企業から広告費を受け取る側なので、企業を不利に並べられないからです。
-このサイトは掲載企業から1円も受け取らず、<b>金融庁EDINETの有価証券報告書だけ</b>を出典にして、{len(companies)}社を並べます。
-</p>
-<p class="lead small">
-数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社・計{sum(len(c["years"]) for c in companies)}件の有価証券報告書）。
+    # ---- ヒーローカルーセル（注目企業）----
+    # 表示企業は平均年間給与トップ10社。サイトが既に公開している「平均年収ランキング」と
+    # 同じ基準を借用しており、恣意的な選定を持ち込まない。
+    salaried = [x for x in companies if x["latest"]["reporting_company"]["average_annual_salary_yen"] is not None]
+    featured = sorted(
+        salaried, key=lambda x: -x["latest"]["reporting_company"]["average_annual_salary_yen"]
+    )[:10]
+
+    def _car_card(x: dict) -> str:
+        initial = x["short"][0] if x["short"] else "?"
+        box = (
+            f'<img src="{e(x["icon"])}" alt="" width="60" height="60" style="width:60px;height:60px;object-fit:contain">'
+            if x["icon"] else e(initial)
+        )
+        return f"""<a class="hero-car-card" href="kigyou/{e(x["slug"])}.html">
+<div class="hero-car-logo">{box}</div>
+<div class="hero-car-name">{e(x["short"])}</div>
+<div class="hero-car-industry">{e(x["peer_group"])}</div>
+<div class="hero-car-cta">詳細を見てみる<span>→</span></div>
+</a>"""
+
+    car_cards = "".join(_car_card(x) for x in featured)
+    carousel_html = f"""<div class="hero-carousel-wrap">
+<div class="hero-carousel chip-scroll" id="hero-carousel">{car_cards}{car_cards}</div>
+<button type="button" class="hero-car-btn hero-car-prev" aria-label="前へ">‹</button>
+<button type="button" class="hero-car-btn hero-car-next" aria-label="次へ">›</button>
+</div>"""
+
+    total_reports = sum(len(x["years"]) for x in companies)
+    stats_html = "".join(
+        f'<div class="hero-stat"><div class="hero-stat-value">{v}</div><div class="hero-stat-label">{lb}</div></div>'
+        for v, lb in [
+            (f"{len(companies):,}社", "掲載企業数"),
+            (f"{len(groups)}業界", "カバーする業種"),
+            (f"{total_reports:,}件", "突き合わせた有報"),
+        ]
+    )
+
+    hero_band = f"""<div class="hero-band">
+<div class="hero-blob hero-blob-a"></div><div class="hero-blob hero-blob-b"></div>
+<div class="hero-inner">
+{carousel_html}
+<h1>データで見る就活サイト</h1>
+<p class="hero-sub">
+数値はプログラムがXBRLから機械的に抽出し、有報のPDFと1件ずつ突き合わせて検証しています（{len(companies)}社・計{total_reports}件の有価証券報告書）。
 AIに数字を書かせていません。データが無い項目は推測で埋めず「非公表」と書きます。
 </p>
-<section class="hero-cta">
+<div class="hero-cta-row">
+<a class="hero-cta-primary" href="shindan.html">就活の軸診断をやってみる</a>
+<a class="hero-cta-secondary" href="hikaku.html">企業を選んで比較する</a>
+</div>
+<div class="hero-stats">{stats_html}</div>
+</div>
+</div>"""
+
+    axes_html = "".join(
+        f'<div class="idx-axis"><div class="idx-axis-name">{e(name)}</div>'
+        f'<div class="idx-axis-bar"><div class="idx-axis-fill" style="width:{p}%"></div></div></div>'
+        for name, p in [("給与水準", 82), ("安定性", 64), ("成長速度", 48), ("働きやすさ", 71)]
+    )
+    ranklinks_html = "".join(
+        f'<a class="idx-ranklink" href="{href}"><div class="idx-ranklink-title">{e(title_)}</div>'
+        + (f'<div class="idx-ranklink-note">{e(note)}</div>' if note else "") + "</a>"
+        for href, title_, note in [
+            ("ranking/index.html", "ランキングと条件別の企業一覧（すべて）", "平均年収・平均勤続年数・女性管理職比率・1人当たり売上高ほか"),
+            ("ranking/nenshu.html", "平均年収ランキング", "持株会社は本体の数字になるため除いています"),
+            ("ranking/nenshu-nobi.html", "平均年収の5年増減率ランキング", "算定基準が変わった会社は対象外"),
+            ("ranking/nenshu-1000man.html", "平均年収1,000万円以上の企業一覧", ""),
+            ("ranking/kinzoku-20nen.html", "平均勤続年数20年以上の企業一覧", ""),
+        ]
+    )
+
+    body = f"""{hero_band}
+<div class="idx-main">
+
+<section class="idx-diagnosis">
+<div class="idx-diagnosis-copy">
 <h2>何を優先するかで、合う会社は変わる</h2>
 <p>12問の二者択一に答えると、<b>自分が就活で何を大事にしているか</b>が8つの軸で出ます。
 そのうえで同じ重みを使って{len(companies)}社を並べ替えます。回答はブラウザの中だけで処理され、どこにも送信されません。</p>
-<p><a class="cta-btn" href="shindan.html">就活の軸診断をやってみる</a></p>
+<p><a class="hero-cta-primary" href="shindan.html">就活の軸診断をやってみる</a></p>
 <p class="caveat">性格診断ではありません。有価証券報告書の数値を、あなたが選んだ重みで並べ替えているだけです。</p>
+</div>
+<div class="idx-diagnosis-axes">{axes_html}</div>
 </section>
 
 <section>
 <h2>ランキングと条件で探す</h2>
 <p>業界をまたいで並べたり、条件で絞り込んだりできます。掲載企業から広告費を受け取っていないので、企業に不利な順位もそのまま出します。</p>
-<ul class="linklist">
-<li><a href="ranking/index.html">ランキングと条件別の企業一覧（すべて）</a><span class="small">平均年収・平均勤続年数・女性管理職比率・1人当たり売上高ほか</span></li>
-<li><a href="ranking/nenshu.html">平均年収ランキング</a><span class="small">持株会社は本体の数字になるため除いています</span></li>
-<li><a href="ranking/nenshu-nobi.html">平均年収の5年増減率ランキング</a><span class="small">算定基準が変わった会社は対象外</span></li>
-<li><a href="ranking/nenshu-1000man.html">平均年収1,000万円以上の企業一覧</a></li>
-<li><a href="ranking/kinzoku-20nen.html">平均勤続年数20年以上の企業一覧</a></li>
-</ul>
+<div class="idx-ranklinks">{ranklinks_html}</div>
 </section>
 
 <section class="showcase" id="showcase">
@@ -1370,7 +1595,8 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 <a href="{PDL_URL}" rel="nofollow">公共データ利用規約（PDL1.0）</a>／当サイトのデータ取得日 {e(fetched)}</p>
 <p class="processing">{e(PROCESSING_NOTICE)}</p>
 </section>
-"""
+
+</div>"""
     title = f"{SITE_NAME}｜{TAGLINE}"
     desc = (
         f"総合商社・銀行・保険・医薬品・海運ほか{len(groups)}業界{len(companies)}社の平均年収、男女の賃金の差異、"
@@ -1687,6 +1913,217 @@ footer.site>p{max-width:960px;margin:6px auto}
 .koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
+
+/* =========================================================================
+ * 新卒の採用枠 v2（新デザイン対応）
+ * 新デザインのカード言語（#fff / #e3e6ec / radius 16px / 同一シャドウ）に合わせた。
+ * ========================================================================= */
+
+/* sticky ナビがアンカー先の見出しに被らないようにする（全セクション共通の直し）。
+   企業ページは header(縮小時) + sub-nav の2段が重なって固定されるため、両方ぶんの高さを確保する */
+main section[id]{scroll-margin-top:112px}
+
+.saiyo-section{margin-bottom:44px}
+
+.saiyo-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+.saiyo-head h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin:0}
+.saiyo-badge{font-size:10.5px;font-weight:800;color:#8a6d1f;background:#fdf4e0;border:1px solid #f0e2bd;border-radius:999px;padding:2px 10px}
+
+.saiyo-lead{margin:0 0 18px;font-size:13.5px;color:#66707f}
+
+.saiyo-tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start;margin:0}
+.saiyo-track{background:#fff;border:1px solid #e3e6ec;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(18,20,31,.04),0 10px 30px rgba(18,20,31,.05)}
+.saiyo-track:only-child{grid-column:1 / -1}
+.saiyo-track h3{margin:0 0 8px;font-size:14.5px;font-weight:800;line-height:1.5}
+.saiyo-field{margin:0 0 6px;font-size:13.5px;color:#3d4453;line-height:1.8}
+.saiyo-field b{color:#22399e;font-weight:800}
+
+.saiyo-more{margin-top:10px;border-top:1px solid #eef0f4}
+.saiyo-more>summary{list-style:none;cursor:pointer;padding:10px 0 0;font-size:12.5px;font-weight:700;color:#22399e}
+.saiyo-more>summary::-webkit-details-marker{display:none}
+.saiyo-more>summary::before{content:"＋ "}
+.saiyo-more[open]>summary::before{content:"− "}
+.saiyo-more .saiyo-field{margin:8px 0 0}
+
+.saiyo-notes{margin:14px 0 0;padding-left:20px;font-size:13px;color:#3d4453;line-height:1.9}
+
+.saiyo-section .caveat{margin:12px 0 0;font-size:12.5px;color:#8a93a3;line-height:1.8}
+.saiyo-section .caveat a{color:#22399e}
+
+/* =========================================================================
+ * 新デザイン（Top Hero / Company Page）2026-08 移植ぶん
+ * ========================================================================= */
+html,body{overflow-x:hidden}
+
+/* ---- 共通：カード・details ---- */
+.cp-card{background:#fff;border:1px solid #e3e6ec;border-radius:16px;box-shadow:0 1px 2px rgba(18,20,31,.04),0 10px 30px rgba(18,20,31,.05)}
+.cp-details{margin-top:14px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:0 18px}
+.cp-details>summary{list-style:none;cursor:pointer;padding:14px 0;font-size:13px;font-weight:700;color:#22399e}
+.cp-details>summary::-webkit-details-marker{display:none}
+.cp-details-hint{font-size:11px;color:#8a93a3;font-weight:400;margin-left:6px}
+.cp-details p{margin:0 0 16px;font-size:13.5px;color:#3d4453;line-height:1.85}
+.cp-lead{margin:0 0 18px;font-size:13.5px;color:#66707f}
+
+/* ---- 企業ページ：アイデンティティ帯 ---- */
+.cp-identity{background:#fff;border-bottom:1px solid #e3e6ec;margin:0 -20px 20px;padding:26px 20px 22px}
+.cp-crumb{font-size:12.5px;color:#66707f;margin-bottom:18px}
+.cp-crumb a{color:#22399e;text-decoration:none}
+.cp-identity-row{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.cp-logo{border-radius:20px;background:linear-gradient(140deg,#eef1fc,#dfe4f6);border:1px solid #dfe4f6;display:flex;align-items:center;justify-content:center;font-weight:800;color:#22399e;overflow:hidden;flex:0 0 auto}
+.cp-identity-body{flex:1 1 280px;min-width:240px}
+.cp-identity-body h1{font-size:24px;line-height:1.35;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+.cp-identity-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.cp-group-badge{font-size:12.5px;font-weight:700;color:#22399e;background:#eef1fc;border:1px solid #dfe4f6;border-radius:999px;padding:4px 12px;text-decoration:none}
+.cp-identity-meta{font-size:12.5px;color:#66707f}
+.cp-identity-lead{margin:0;font-size:14px;color:#3d4453}
+.cp-identity-actions{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:200px}
+.cp-official,.cp-recruit{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;border-radius:999px;padding:9px 18px;text-decoration:none}
+.cp-official{color:#12141f;background:#fff;border:1px solid #e3e6ec}
+.cp-official:hover{border-color:#c9d2ee}
+.cp-recruit{color:#1b7f5f;background:#eaf7f1;border:1px solid #c3e6d5}
+.cp-recruit:hover{border-color:#94d3b6}
+.cp-action-host{font-size:11px;font-weight:400;color:#66707f}
+.cp-recruit .cp-action-host{color:#4b8a72}
+.cp-recruit-note{font-size:11.5px;color:#8a93a3;line-height:1.6;max-width:230px;margin:0}
+.cp-compare-cta{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(120deg,#2f4bd6,#5570e6);border-radius:999px;padding:10px 18px;text-decoration:none;box-shadow:0 6px 18px rgba(47,75,214,.26)}
+
+/* ---- 企業ページ：sticky sub-nav ----
+   header.site（縮小時）と2段で重なって固定されるため、headerぶんの高さを見込んでtopをずらす */
+.cp-subnav{position:sticky;top:64px;z-index:40;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid #e3e6ec;margin:0 -20px 24px}
+.cp-subnav-inner{display:flex;gap:4px;overflow-x:auto;padding:0 20px}
+.cp-subnav a{flex:0 0 auto;white-space:nowrap;font-size:13px;font-weight:700;color:#3d4453;text-decoration:none;padding:14px 14px;border-bottom:2px solid transparent}
+.cp-subnav a:hover{color:#22399e;border-bottom-color:#c9d2ee}
+
+.cp-section{margin-bottom:44px}
+.cp-section h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin:0 0 4px;padding-bottom:0;border-bottom:none}
+
+/* ---- 基本データカード ---- */
+.cp-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.cp-metric-card{padding:20px 22px}
+.cp-metric-label{font-size:12.5px;font-weight:700;color:#66707f;margin-bottom:6px}
+.cp-metric-value{font-size:27px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.cp-metric-value-sm{font-size:19px}
+.cp-metric-sub{font-size:12px;color:#8a93a3;margin-top:2px;font-variant-numeric:tabular-nums}
+.cp-metric-bar{height:7px;border-radius:999px;background:#eef0f4;overflow:hidden;margin:14px 0 8px}
+.cp-metric-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+.cp-metric-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:22px}
+.cp-metric-rank{font-size:12px;font-weight:800;color:#22399e;background:#eef1fc;border-radius:999px;padding:3px 10px}
+.cp-metric-pct{font-size:12px;color:#66707f}
+.cp-emp-divider{border-top:1px solid #eef0f4;margin:14px 0 10px}
+
+/* ---- 給与の推移 ---- */
+.cp-trend{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:stretch;margin-bottom:12px}
+.cp-trend-info{border:1px solid;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:center}
+.cp-trend-range{font-size:12px;font-weight:700;color:#66707f;letter-spacing:.02em}
+.cp-trend-delta{font-size:38px;line-height:1.1;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.cp-trend-arrow{font-size:22px;margin-left:6px}
+.cp-trend-abs{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.cp-trend-note{font-size:12px;color:#66707f;margin-top:10px;line-height:1.7}
+.cp-trend-chart{padding:14px 16px 8px}
+
+/* ---- 多様性の指標 ---- */
+.cp-diversity{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.cp-diversity-card{padding:22px;display:flex;gap:20px;align-items:center}
+.cp-ring{position:relative;width:88px;height:88px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.cp-ring-inner{width:68px;height:68px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;color:#12141f;text-align:center}
+.cp-ring-inner-na{font-size:12px}
+.cp-diversity-body{min-width:0}
+.cp-diversity-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.cp-diversity-label{font-size:13.5px;font-weight:800}
+.cp-diversity-tag{font-size:10.5px;font-weight:800;color:#8a6d1f;background:#fdf4e0;border:1px solid #f0e2bd;border-radius:999px;padding:2px 8px}
+.cp-diversity-note{font-size:12.5px;color:#66707f;line-height:1.7}
+
+/* ---- 規模の近い同業他社（表） ---- */
+.cp-ptable{width:100%;border-collapse:collapse;min-width:640px;background:#fff;border:1px solid #e3e6ec;border-radius:16px;overflow:hidden}
+.cp-ptable-th{text-align:left;font-size:12px;color:#66707f;font-weight:700;padding:0;border-bottom:1px solid #eef0f4;background:#fff}
+.cp-ptable-th-name{padding:14px 18px}
+.cp-sort-btn{appearance:none;cursor:pointer;font:inherit;font-size:12px;font-weight:700;color:#66707f;background:transparent;border:0;border-radius:8px;padding:14px 10px;white-space:nowrap}
+.cp-sort-btn:hover,.cp-sort-btn.is-active{color:#22399e;background:#eef1fc}
+.cp-sort-arrow{margin-left:3px}
+.cp-ptable-name{text-align:left;padding:13px 18px;border-bottom:1px solid #f2f4f7;font-weight:700;font-size:13.5px}
+.cp-ptable td{padding:13px 18px;border-bottom:1px solid #f2f4f7;vertical-align:middle}
+.cp-row-self{background:#f4f6ff}
+.cp-row-self .cp-ptable-name{background:#f4f6ff}
+.cp-row-logo{display:inline-flex;width:22px;height:22px;border-radius:6px;background:#eef1fc;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:800;color:#22399e;margin-right:8px;vertical-align:-6px}
+.cp-self-badge{font-size:10.5px;font-weight:800;color:#fff;background:#2f4bd6;border-radius:999px;padding:2px 8px;margin-left:6px}
+.cp-cell-val{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:#12141f}
+.cp-cell-na{color:#8a93a3;font-weight:400}
+.cp-bar-track{height:5px;border-radius:999px;background:#eef0f4;margin-top:6px;min-width:76px}
+.cp-bar-fill{height:100%;border-radius:999px}
+.cp-bar-self{background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+.cp-bar-other{background:#cdd5ee}
+
+/* ---- 出典 ---- */
+.cp-source{padding:26px 28px}
+.cp-source h2{margin:0 0 12px}
+.cp-source ul{margin:0 0 14px;padding-left:20px;font-size:13.5px;color:#3d4453;line-height:1.9}
+.cp-source .processing{margin:0;font-size:12.5px;color:#8a93a3}
+
+@media(max-width:640px){
+  .cp-identity{margin:0 -14px 16px;padding:20px 14px 18px}
+  .cp-subnav{margin:0 -14px 18px}
+  .cp-subnav-inner{padding:0 14px}
+  .cp-trend{grid-template-columns:1fr}
+  .cp-identity-actions{width:100%}
+  .cp-official,.cp-recruit,.cp-compare-cta{justify-content:center}
+}
+
+/* ---- トップページ：ヒーロー帯 ----
+   960px固定のmainの中にいてもビューポート全幅に見せるため、幅100vw+transformで中央基準に敷き直す
+   （margin-left:calc(50% - 50vw)は親のmax-width幅を基準に計算されてしまい、960px制約下では
+   正しく全幅にならないため使わない） */
+.hero-band{width:100vw;margin-left:50%;transform:translateX(-50%);position:relative;overflow:hidden;background:linear-gradient(120deg,#10122a 0%,#1d2864 100%)}
+.hero-blob{position:absolute;border-radius:50%;pointer-events:none}
+.hero-blob-a{top:-120px;right:-80px;width:520px;height:520px;background:radial-gradient(circle,rgba(90,112,230,.35),transparent 70%)}
+.hero-blob-b{bottom:-160px;left:-60px;width:420px;height:420px;background:radial-gradient(circle,rgba(90,112,230,.18),transparent 70%)}
+.hero-inner{max-width:1120px;margin:0 auto;padding:40px 24px 64px;position:relative;z-index:1}
+.hero-inner h1{color:#fff;font-size:27px;line-height:1.5;font-weight:800;letter-spacing:-.01em;margin:0 0 14px;max-width:720px}
+.hero-lead{max-width:720px;color:#c2caf1;font-size:14.5px;line-height:1.85;margin:0 0 10px}
+.hero-lead b{color:#fff}
+.hero-sub{max-width:720px;font-size:13px;color:#9aa4d9;margin:0 0 30px;line-height:1.8}
+
+.hero-carousel-wrap{max-width:1000px;position:relative;margin:0 0 28px;padding:0 44px}
+.hero-carousel{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;scrollbar-width:none}
+.hero-carousel::-webkit-scrollbar{display:none}
+.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-decoration:none;text-align:center}
+.hero-car-card:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.36)}
+.hero-car-logo{width:80px;height:80px;border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#22399e;overflow:hidden;box-shadow:0 8px 22px rgba(6,8,26,.28)}
+.hero-car-name{font-size:14.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
+.hero-car-industry{font-size:11.5px;color:#9aa4d9;margin-top:-8px}
+.hero-car-cta{margin-top:auto;font-size:12px;font-weight:700;color:#a9b6ff}
+.hero-car-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.26);background:rgba(13,15,36,.82);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hero-car-btn:hover{background:#2f4bd6}
+.hero-car-prev{left:0}
+.hero-car-next{right:0}
+
+.hero-cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:36px}
+.hero-cta-primary{display:inline-flex;align-items:center;font-weight:800;color:#fff;background:linear-gradient(120deg,#2f4bd6,#5570e6);padding:13px 26px;border-radius:999px;text-decoration:none;font-size:14.5px;box-shadow:0 6px 18px rgba(47,75,214,.28)}
+.hero-cta-secondary{display:inline-flex;align-items:center;font-weight:700;color:#cfd4ef;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.24);padding:12px 25px;border-radius:999px;text-decoration:none;font-size:14.5px}
+.hero-stats{display:flex;gap:14px;flex-wrap:wrap}
+.hero-stat{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:16px 22px;min-width:140px}
+.hero-stat-value{font-size:24px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.hero-stat-label{font-size:12.5px;color:#9aa4d9;margin-top:4px}
+
+/* ---- トップページ：診断カード・ランキングリンク ---- */
+.idx-main{padding-top:8px}
+.idx-diagnosis{margin:40px 0;background:linear-gradient(140deg,#f4f6ff 0%,#eef1fc 55%,#f7f4ff 100%);border:1px solid #dfe4f6;border-radius:20px;padding:32px;display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center}
+.idx-diagnosis h2{margin:0 0 12px;border-bottom:none;padding-bottom:0}
+.idx-diagnosis-axes{display:flex;flex-direction:column;gap:10px}
+.idx-axis{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:center}
+.idx-axis-name{font-size:13px;font-weight:700}
+.idx-axis-bar{background:#e3e6ec;border-radius:999px;height:9px;overflow:hidden}
+.idx-axis-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+
+.idx-ranklinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.idx-ranklink{display:block;background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:16px 18px;text-decoration:none;color:#12141f}
+.idx-ranklink:hover{border-color:#c9d2ee;box-shadow:var(--shadow-lift)}
+.idx-ranklink-title{font-weight:700;font-size:14px}
+.idx-ranklink-note{font-size:12.5px;color:#66707f;margin-top:5px}
+
+@media(max-width:700px){
+  .idx-diagnosis{grid-template-columns:1fr}
+  .hero-inner h1{font-size:22px}
+}
 """
 
 
@@ -2179,50 +2616,107 @@ APP_JS = r"""(function () {
     root.querySelector(".tk-globalsort").addEventListener("change", function () { if (D) render(); });
   }
 
-  // ---- 新卒の採用枠（企業ページに実行時で差し込む） ----
+  // ---- 新卒の採用枠（企業ページに実行時で差し込む） v2（新デザイン対応） ----
   // HTMLには焼き込まない。data/saiyo.json をスラッグで引いて、見つかった会社だけ
-  // 「公式サイト・採用ページへの導線」(.extlinks) の直後にセクションを追加する。
+  // 挿入先を #kihon（基本データ）直前 → <main> 先頭 → .extlinks 直後（旧デザイン互換）
+  // の順にフォールバック探索してセクションを追加する。
   // データが増えても data/saiyo.json を更新するだけで全ページに反映される
   // （企業ページ1,500枚超を再生成しなくてよい）。
+  var SAIYO_FIELD_LABEL = { conditions: "条件", overview: "概要", timing: "時期" };
+
+  function saiyoEsc(x) {
+    return String(x).replace(/[&<>"']/g, function (ch) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
+    });
+  }
+
+  function buildSaiyoSectionHTML(s) {
+    var order = ["conditions", "overview", "timing"];
+
+    var tracks = s.tracks.map(function (t) {
+      var present = order.filter(function (k) { return t[k]; });
+      var lead = present[0] || null;
+      var rest = present.slice(1);
+
+      var leadHtml = lead
+        ? '<p class="saiyo-field"><b>' + SAIYO_FIELD_LABEL[lead] + "：</b>" + saiyoEsc(t[lead]) + "</p>"
+        : "";
+
+      var moreHtml = "";
+      if (rest.length) {
+        var fields = rest.map(function (k) {
+          return '<p class="saiyo-field"><b>' + SAIYO_FIELD_LABEL[k] + "：</b>" + saiyoEsc(t[k]) + "</p>";
+        }).join("");
+        var label = rest.map(function (k) { return SAIYO_FIELD_LABEL[k]; }).join("・") + "を見る";
+        moreHtml = '<details class="saiyo-more"><summary>' + label + "</summary>" + fields + "</details>";
+      }
+
+      return '<div class="saiyo-track"><h3>' + saiyoEsc(t.name) + "</h3>" + leadHtml + moreHtml + "</div>";
+    }).join("");
+
+    var faculty = s.target_faculty ? "　対象：" + saiyoEsc(s.target_faculty) : "";
+
+    var notes = (s.notes || []).map(function (n) { return "<li>" + saiyoEsc(n) + "</li>"; }).join("");
+    var notesHtml = notes ? '<ul class="saiyo-notes">' + notes + "</ul>" : "";
+
+    var srcs = (s.source_urls || []).map(function (u) {
+      var host = "";
+      try { host = new URL(u).hostname; } catch (e) { host = u; }
+      return '<a href="' + saiyoEsc(u) + '" rel="nofollow noopener" target="_blank">' + saiyoEsc(host) + "</a>";
+    }).join(" ");
+
+    return (
+      '<div class="saiyo-head"><h2>新卒の採用枠</h2>' +
+      '<span class="saiyo-badge">出典：公式採用ページ（有価証券報告書ではありません）</span></div>' +
+      '<p class="saiyo-lead">公式の採用ページに書かれていた内容だけを要約しています。' + faculty + "</p>" +
+      '<div class="saiyo-tracks">' + tracks + "</div>" +
+      notesHtml +
+      '<p class="caveat">採用ページ（' + srcs + "）を" + saiyoEsc(s.fetched_at || "") + "時点でこのセッションが読み、" +
+      "書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>"
+    );
+  }
+
+  function injectSaiyoSection(s) {
+    if (!s || !s.tracks || !s.tracks.length) return;
+    if (document.getElementById("saiyo")) return; // 二重挿入ガード
+
+    var section = document.createElement("section");
+    section.id = "saiyo";
+    section.className = "saiyo-section";
+    section.innerHTML = buildSaiyoSectionHTML(s);
+
+    var kihon = document.getElementById("kihon");
+    var mainEl = document.querySelector("main");
+    var ext = document.querySelector(".extlinks");
+    if (kihon && kihon.parentNode) {
+      kihon.parentNode.insertBefore(section, kihon);       // 新デザイン：基本データの直前（冒頭）
+    } else if (mainEl) {
+      mainEl.insertBefore(section, mainEl.firstChild);      // フォールバック：main 先頭
+    } else if (ext) {
+      ext.insertAdjacentElement("afterend", section);       // 旧デザイン互換
+    } else {
+      return;
+    }
+
+    // sticky ナビに「採用枠」タブを追加（新デザインのみ：#kihon タブの存在で判定）
+    var tab = document.querySelector('a[href="#kihon"]');
+    if (tab && !document.querySelector('a[href="#saiyo"]')) {
+      var t2 = tab.cloneNode(false); // 属性（インラインstyle含む）ごと複製し、見た目を揃える
+      t2.href = "#saiyo";
+      t2.textContent = "採用枠";
+      tab.parentNode.insertBefore(t2, tab);
+    }
+  }
+
   function initSaiyoInject() {
-    var anchor = document.querySelector(".extlinks");
-    if (!anchor) return;                            // 公式サイト情報が無い会社は対象外
     var m = /\/kigyou\/([^/]+)\.html/.exec(location.pathname);
     var slug = m ? m[1] : null;
     if (!slug) return;
 
-    var FIELD_LABEL = { conditions: "条件", overview: "概要", timing: "時期" };
-
-    fetch(base + "data/saiyo.json").then(function (r) { return r.json(); }).then(function (all) {
-      var s = all[slug];
-      if (!s || !s.tracks || !s.tracks.length) return;
-
-      var tracks = s.tracks.map(function (t) {
-        var fields = ["conditions", "overview", "timing"].map(function (k) {
-          if (!t[k]) return "";
-          return '<p class="saiyo-field"><b>' + FIELD_LABEL[k] + '：</b>' + esc(t[k]) + "</p>";
-        }).join("");
-        return '<div class="saiyo-track"><h3>' + esc(t.name) + "</h3>" + fields + "</div>";
-      }).join("");
-
-      var notes = (s.notes || []).map(function (n) { return "<li>" + esc(n) + "</li>"; }).join("");
-      var notesHtml = notes ? '<ul class="saiyo-notes">' + notes + "</ul>" : "";
-
-      var srcs = (s.source_urls || []).map(function (u) {
-        var host = "";
-        try { host = new URL(u).hostname; } catch (e) { host = u; }
-        return '<a href="' + esc(u) + '" rel="nofollow noopener" target="_blank">' + esc(host) + "</a>";
-      }).join(" ");
-
-      var section = document.createElement("section");
-      section.innerHTML =
-        "<h2>新卒の採用枠</h2>" +
-        '<div class="saiyo-tracks">' + tracks + "</div>" +
-        notesHtml +
-        '<p class="caveat">採用ページ（' + srcs + "）を" + esc(s.fetched_at || "") + "時点でこのセッションが読み、" +
-        "書かれていた内容だけを要約したものです。募集要項は年度ごとに変わります。<b>最新の内容は必ず公式の採用ページで確認してください。</b></p>";
-      anchor.insertAdjacentElement("afterend", section);
-    }).catch(function () { /* データ取得に失敗しても他の表示は止めない */ });
+    fetch(base + "data/saiyo.json")
+      .then(function (r) { return r.json(); })
+      .then(function (all) { injectSaiyoSection(all[slug]); })
+      .catch(function () { /* データ取得に失敗しても他の表示は止めない */ });
   }
 
   // ---- 業界ショーケース（トップページ：横に流れる企業帯） ----
@@ -2402,6 +2896,110 @@ APP_JS = r"""(function () {
     onScroll();
   }
 
+  // ---- トップページ：ヒーローカルーセル（注目企業、自動送り＋矢印） ----
+  function initHeroCarousel() {
+    var track = document.getElementById("hero-carousel");
+    if (!track) return;
+    var wrap = track.closest(".hero-carousel-wrap");
+    var prevBtn = wrap.querySelector(".hero-car-prev");
+    var nextBtn = wrap.querySelector(".hero-car-next");
+    var paused = false, resumeT = null, raf = null, timer = null;
+
+    function half() {
+      var kids = track.children;
+      if (!kids.length) return 0;
+      var mid = kids[Math.floor(kids.length / 2)];
+      return mid ? mid.offsetLeft - kids[0].offsetLeft : track.scrollWidth / 2;
+    }
+
+    function step(dir) {
+      var kids = track.children;
+      if (!kids.length) return;
+      var w = kids[0].offsetWidth + 14;
+      var h = half();
+      cancelAnimationFrame(raf);
+      if (dir < 0 && track.scrollLeft < w) track.scrollLeft += h;
+      var target = track.scrollLeft + dir * w;
+      var best = null;
+      for (var i = 0; i < kids.length; i++) {
+        var off = kids[i].offsetLeft - kids[0].offsetLeft;
+        if (best === null || Math.abs(off - target) < Math.abs(best - target)) best = off;
+      }
+      if (best !== null) target = best;
+      var from = track.scrollLeft, dist = target - from, dur = 900, t0 = performance.now();
+      function tick(now) {
+        var t = Math.min(1, (now - t0) / dur);
+        var eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        track.scrollLeft = from + dist * eased;
+        if (t < 1) { raf = requestAnimationFrame(tick); }
+        else if (track.scrollLeft >= h) { track.scrollLeft -= h; }
+      }
+      raf = requestAnimationFrame(tick);
+    }
+
+    function stopAuto() { if (timer) clearInterval(timer); timer = null; }
+    function startAuto() {
+      stopAuto();
+      if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      timer = setInterval(function () { if (!paused) step(1); }, 3000);
+    }
+    function pauseFor(ms) {
+      paused = true;
+      clearTimeout(resumeT);
+      resumeT = setTimeout(function () { paused = false; }, ms);
+    }
+
+    if (prevBtn) prevBtn.addEventListener("click", function () { pauseFor(4000); step(-1); });
+    if (nextBtn) nextBtn.addEventListener("click", function () { pauseFor(4000); step(1); });
+    wrap.addEventListener("mouseenter", function () { paused = true; clearTimeout(resumeT); });
+    wrap.addEventListener("mouseleave", function () { paused = false; });
+    wrap.addEventListener("touchstart", function () { paused = true; clearTimeout(resumeT); }, { passive: true });
+    wrap.addEventListener("touchend", function () { pauseFor(2500); }, { passive: true });
+
+    startAuto();
+  }
+
+  // ---- 企業ページ：規模の近い同業他社テーブルの列ソート ----
+  function initPeerSort() {
+    var table = document.getElementById("cp-peer-table");
+    if (!table) return;
+    var tbody = table.querySelector("tbody");
+    var btns = table.querySelectorAll(".cp-sort-btn");
+    var state = { key: "emp", dir: -1 };
+
+    function apply() {
+      var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+      rows.sort(function (a, b) {
+        var aCell = a.querySelector('td[data-key="' + state.key + '"]');
+        var bCell = b.querySelector('td[data-key="' + state.key + '"]');
+        var av = aCell && aCell.dataset.val !== "" ? parseFloat(aCell.dataset.val) : null;
+        var bv = bCell && bCell.dataset.val !== "" ? parseFloat(bCell.dataset.val) : null;
+        if (av === null && bv === null) return 0;
+        if (av === null) return 1;
+        if (bv === null) return -1;
+        return state.dir < 0 ? bv - av : av - bv;
+      });
+      rows.forEach(function (r) { tbody.appendChild(r); });
+      btns.forEach(function (b) {
+        var on = b.dataset.key === state.key;
+        b.classList.toggle("is-active", on);
+        var arrow = b.querySelector(".cp-sort-arrow");
+        if (arrow) arrow.textContent = on ? (state.dir < 0 ? " ↓" : " ↑") : "";
+      });
+    }
+
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var key = b.dataset.key;
+        if (state.key === key) state.dir = -state.dir;
+        else { state.key = key; state.dir = -1; }
+        apply();
+      });
+    });
+
+    apply();
+  }
+
   document.addEventListener("DOMContentLoaded", function () {
     initSearch();
     initCompare();
@@ -2409,6 +3007,8 @@ APP_JS = r"""(function () {
     initTekisei();
     initSaiyoInject();
     initShowcase();
+    initHeroCarousel();
+    initPeerSort();
     initReveal();
     initChrome();
   });
@@ -2474,7 +3074,7 @@ def main() -> None:
         urls.append(path)
     for c in companies:
         path = f"/kigyou/{c['slug']}.html"
-        (SITE / path.lstrip("/")).write_text(company_page(c, groups[c["peer_group"]], fetched, newest), encoding="utf-8")
+        (SITE / path.lstrip("/")).write_text(company_page(c, groups[c["peer_group"]], companies, fetched, newest), encoding="utf-8")
         urls.append(path)
 
     # クライアント側の絞り込み用（Layer 2 で使う）。サーバーは要らない。

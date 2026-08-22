@@ -4,6 +4,11 @@ logs/
 data/saiyo_raw/
 data/saiyo_clean/
 
+# Gemini構造化パイプラインの中間生成物（data/saiyo/への分割は完了済み）
+raw_jobs_data.json
+gemini_batches/
+gemini_output/
+
 # 秘密
 .env
 

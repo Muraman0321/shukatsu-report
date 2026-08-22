@@ -290,5 +290,227 @@ footer.site>p{max-width:960px;margin:6px auto}
 .compare-groups details[open] summary:after{content:"−"}
 .compare-checklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
 .compare-checklist label{display:flex;align-items:center;gap:7px;font-size:13.5px;padding:5px 0;cursor:pointer}
+.koumu-groups{margin:8px 0 20px}
+.koumu-groups details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden}
+.koumu-groups summary{padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}
+.koumu-groups summary::-webkit-details-marker{display:none}
+.koumu-groups summary:after{content:"+";float:right;color:var(--mut);font-weight:400}
+.koumu-groups details[open] summary:after{content:"−"}
+.koumu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
+.koumu-list a{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;padding:7px 0;color:var(--fg);text-decoration:none;border-bottom:1px dashed var(--line)}
+.koumu-list a:hover{color:var(--link)}
+.koumu-list .koumu-flag{font-size:11px;color:var(--mut);white-space:nowrap}
+.koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
+
+/* =========================================================================
+ * 新卒の採用枠 v2（新デザイン対応）
+ * 新デザインのカード言語（#fff / #e3e6ec / radius 16px / 同一シャドウ）に合わせた。
+ * ========================================================================= */
+
+/* sticky ナビがアンカー先の見出しに被らないようにする（全セクション共通の直し）。
+   企業ページは header(縮小時) + sub-nav の2段が重なって固定されるため、両方ぶんの高さを確保する */
+main section[id]{scroll-margin-top:112px}
+
+.saiyo-section{margin-bottom:44px}
+
+.saiyo-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 4px}
+.saiyo-head h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin:0}
+.saiyo-badge{font-size:10.5px;font-weight:800;color:#8a6d1f;background:#fdf4e0;border:1px solid #f0e2bd;border-radius:999px;padding:2px 10px}
+
+.saiyo-lead{margin:0 0 18px;font-size:13.5px;color:#66707f}
+
+.saiyo-tracks{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px;align-items:start;margin:0}
+.saiyo-track{background:#fff;border:1px solid #e3e6ec;border-radius:16px;padding:18px 20px;box-shadow:0 1px 2px rgba(18,20,31,.04),0 10px 30px rgba(18,20,31,.05)}
+.saiyo-track:only-child{grid-column:1 / -1}
+.saiyo-track h3{margin:0 0 8px;font-size:14.5px;font-weight:800;line-height:1.5}
+.saiyo-field{margin:0 0 6px;font-size:13.5px;color:#3d4453;line-height:1.8}
+.saiyo-field b{color:#22399e;font-weight:800}
+
+.saiyo-more{margin-top:10px;border-top:1px solid #eef0f4}
+.saiyo-more>summary{list-style:none;cursor:pointer;padding:10px 0 0;font-size:12.5px;font-weight:700;color:#22399e}
+.saiyo-more>summary::-webkit-details-marker{display:none}
+.saiyo-more>summary::before{content:"＋ "}
+.saiyo-more[open]>summary::before{content:"− "}
+.saiyo-more .saiyo-field{margin:8px 0 0}
+
+.saiyo-notes{margin:14px 0 0;padding-left:20px;font-size:13px;color:#3d4453;line-height:1.9}
+
+.saiyo-section .caveat{margin:12px 0 0;font-size:12.5px;color:#8a93a3;line-height:1.8}
+.saiyo-section .caveat a{color:#22399e}
+
+/* =========================================================================
+ * 新デザイン（Top Hero / Company Page）2026-08 移植ぶん
+ * ========================================================================= */
+html,body{overflow-x:hidden}
+
+/* ---- 共通：カード・details ---- */
+.cp-card{background:#fff;border:1px solid #e3e6ec;border-radius:16px;box-shadow:0 1px 2px rgba(18,20,31,.04),0 10px 30px rgba(18,20,31,.05)}
+.cp-details{margin-top:14px;background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:0 18px}
+.cp-details>summary{list-style:none;cursor:pointer;padding:14px 0;font-size:13px;font-weight:700;color:#22399e}
+.cp-details>summary::-webkit-details-marker{display:none}
+.cp-details-hint{font-size:11px;color:#8a93a3;font-weight:400;margin-left:6px}
+.cp-details p{margin:0 0 16px;font-size:13.5px;color:#3d4453;line-height:1.85}
+.cp-lead{margin:0 0 18px;font-size:13.5px;color:#66707f}
+
+/* ---- 企業ページ：アイデンティティ帯 ---- */
+.cp-identity{background:#fff;border-bottom:1px solid #e3e6ec;margin:0 -20px 20px;padding:26px 20px 22px}
+.cp-crumb{font-size:12.5px;color:#66707f;margin-bottom:18px}
+.cp-crumb a{color:#22399e;text-decoration:none}
+.cp-identity-row{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap}
+.cp-logo{border-radius:20px;background:linear-gradient(140deg,#eef1fc,#dfe4f6);border:1px solid #dfe4f6;display:flex;align-items:center;justify-content:center;font-weight:800;color:#22399e;overflow:hidden;flex:0 0 auto}
+.cp-identity-body{flex:1 1 280px;min-width:240px}
+.cp-identity-body h1{font-size:24px;line-height:1.35;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+.cp-identity-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+.cp-group-badge{font-size:12.5px;font-weight:700;color:#22399e;background:#eef1fc;border:1px solid #dfe4f6;border-radius:999px;padding:4px 12px;text-decoration:none}
+.cp-identity-meta{font-size:12.5px;color:#66707f}
+.cp-identity-lead{margin:0;font-size:14px;color:#3d4453}
+.cp-identity-actions{display:flex;flex-direction:column;gap:8px;flex:0 0 auto;min-width:200px}
+.cp-official,.cp-recruit{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;border-radius:999px;padding:9px 18px;text-decoration:none}
+.cp-official{color:#12141f;background:#fff;border:1px solid #e3e6ec}
+.cp-official:hover{border-color:#c9d2ee}
+.cp-recruit{color:#1b7f5f;background:#eaf7f1;border:1px solid #c3e6d5}
+.cp-recruit:hover{border-color:#94d3b6}
+.cp-action-host{font-size:11px;font-weight:400;color:#66707f}
+.cp-recruit .cp-action-host{color:#4b8a72}
+.cp-recruit-note{font-size:11.5px;color:#8a93a3;line-height:1.6;max-width:230px;margin:0}
+.cp-compare-cta{display:inline-flex;align-items:center;justify-content:center;gap:6px;font-size:13px;font-weight:800;color:#fff;background:linear-gradient(120deg,#2f4bd6,#5570e6);border-radius:999px;padding:10px 18px;text-decoration:none;box-shadow:0 6px 18px rgba(47,75,214,.26)}
+
+/* ---- 企業ページ：sticky sub-nav ----
+   header.site（縮小時）と2段で重なって固定されるため、headerぶんの高さを見込んでtopをずらす */
+.cp-subnav{position:sticky;top:64px;z-index:40;background:rgba(255,255,255,.94);backdrop-filter:blur(10px);border-bottom:1px solid #e3e6ec;margin:0 -20px 24px}
+.cp-subnav-inner{display:flex;gap:4px;overflow-x:auto;padding:0 20px}
+.cp-subnav a{flex:0 0 auto;white-space:nowrap;font-size:13px;font-weight:700;color:#3d4453;text-decoration:none;padding:14px 14px;border-bottom:2px solid transparent}
+.cp-subnav a:hover{color:#22399e;border-bottom-color:#c9d2ee}
+
+.cp-section{margin-bottom:44px}
+.cp-section h2{font-size:19px;font-weight:800;letter-spacing:-.01em;margin:0 0 4px;padding-bottom:0;border-bottom:none}
+
+/* ---- 基本データカード ---- */
+.cp-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.cp-metric-card{padding:20px 22px}
+.cp-metric-label{font-size:12.5px;font-weight:700;color:#66707f;margin-bottom:6px}
+.cp-metric-value{font-size:27px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.cp-metric-value-sm{font-size:19px}
+.cp-metric-sub{font-size:12px;color:#8a93a3;margin-top:2px;font-variant-numeric:tabular-nums}
+.cp-metric-bar{height:7px;border-radius:999px;background:#eef0f4;overflow:hidden;margin:14px 0 8px}
+.cp-metric-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+.cp-metric-badges{display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:22px}
+.cp-metric-rank{font-size:12px;font-weight:800;color:#22399e;background:#eef1fc;border-radius:999px;padding:3px 10px}
+.cp-metric-pct{font-size:12px;color:#66707f}
+.cp-emp-divider{border-top:1px solid #eef0f4;margin:14px 0 10px}
+
+/* ---- 給与の推移 ---- */
+.cp-trend{display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:stretch;margin-bottom:12px}
+.cp-trend-info{border:1px solid;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:center}
+.cp-trend-range{font-size:12px;font-weight:700;color:#66707f;letter-spacing:.02em}
+.cp-trend-delta{font-size:38px;line-height:1.1;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;margin:6px 0 2px}
+.cp-trend-arrow{font-size:22px;margin-left:6px}
+.cp-trend-abs{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums}
+.cp-trend-note{font-size:12px;color:#66707f;margin-top:10px;line-height:1.7}
+.cp-trend-chart{padding:14px 16px 8px}
+
+/* ---- 多様性の指標 ---- */
+.cp-diversity{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.cp-diversity-card{padding:22px;display:flex;gap:20px;align-items:center}
+.cp-ring{position:relative;width:88px;height:88px;flex:0 0 auto;border-radius:50%;display:flex;align-items:center;justify-content:center}
+.cp-ring-inner{width:68px;height:68px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;color:#12141f;text-align:center}
+.cp-ring-inner-na{font-size:12px}
+.cp-diversity-body{min-width:0}
+.cp-diversity-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.cp-diversity-label{font-size:13.5px;font-weight:800}
+.cp-diversity-tag{font-size:10.5px;font-weight:800;color:#8a6d1f;background:#fdf4e0;border:1px solid #f0e2bd;border-radius:999px;padding:2px 8px}
+.cp-diversity-note{font-size:12.5px;color:#66707f;line-height:1.7}
+
+/* ---- 規模の近い同業他社（表） ---- */
+.cp-ptable{width:100%;border-collapse:collapse;min-width:640px;background:#fff;border:1px solid #e3e6ec;border-radius:16px;overflow:hidden}
+.cp-ptable-th{text-align:left;font-size:12px;color:#66707f;font-weight:700;padding:0;border-bottom:1px solid #eef0f4;background:#fff}
+.cp-ptable-th-name{padding:14px 18px}
+.cp-sort-btn{appearance:none;cursor:pointer;font:inherit;font-size:12px;font-weight:700;color:#66707f;background:transparent;border:0;border-radius:8px;padding:14px 10px;white-space:nowrap}
+.cp-sort-btn:hover,.cp-sort-btn.is-active{color:#22399e;background:#eef1fc}
+.cp-sort-arrow{margin-left:3px}
+.cp-ptable-name{text-align:left;padding:13px 18px;border-bottom:1px solid #f2f4f7;font-weight:700;font-size:13.5px}
+.cp-ptable td{padding:13px 18px;border-bottom:1px solid #f2f4f7;vertical-align:middle}
+.cp-row-self{background:#f4f6ff}
+.cp-row-self .cp-ptable-name{background:#f4f6ff}
+.cp-row-logo{display:inline-flex;width:22px;height:22px;border-radius:6px;background:#eef1fc;align-items:center;justify-content:center;overflow:hidden;font-size:11px;font-weight:800;color:#22399e;margin-right:8px;vertical-align:-6px}
+.cp-self-badge{font-size:10.5px;font-weight:800;color:#fff;background:#2f4bd6;border-radius:999px;padding:2px 8px;margin-left:6px}
+.cp-cell-val{font-size:13.5px;font-weight:700;font-variant-numeric:tabular-nums;color:#12141f}
+.cp-cell-na{color:#8a93a3;font-weight:400}
+.cp-bar-track{height:5px;border-radius:999px;background:#eef0f4;margin-top:6px;min-width:76px}
+.cp-bar-fill{height:100%;border-radius:999px}
+.cp-bar-self{background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+.cp-bar-other{background:#cdd5ee}
+
+/* ---- 出典 ---- */
+.cp-source{padding:26px 28px}
+.cp-source h2{margin:0 0 12px}
+.cp-source ul{margin:0 0 14px;padding-left:20px;font-size:13.5px;color:#3d4453;line-height:1.9}
+.cp-source .processing{margin:0;font-size:12.5px;color:#8a93a3}
+
+@media(max-width:640px){
+  .cp-identity{margin:0 -14px 16px;padding:20px 14px 18px}
+  .cp-subnav{margin:0 -14px 18px}
+  .cp-subnav-inner{padding:0 14px}
+  .cp-trend{grid-template-columns:1fr}
+  .cp-identity-actions{width:100%}
+  .cp-official,.cp-recruit,.cp-compare-cta{justify-content:center}
+}
+
+/* ---- トップページ：ヒーロー帯 ----
+   960px固定のmainの中にいてもビューポート全幅に見せるため、幅100vw+transformで中央基準に敷き直す
+   （margin-left:calc(50% - 50vw)は親のmax-width幅を基準に計算されてしまい、960px制約下では
+   正しく全幅にならないため使わない） */
+.hero-band{width:100vw;margin-left:50%;transform:translateX(-50%);position:relative;overflow:hidden;background:linear-gradient(120deg,#10122a 0%,#1d2864 100%)}
+.hero-blob{position:absolute;border-radius:50%;pointer-events:none}
+.hero-blob-a{top:-120px;right:-80px;width:520px;height:520px;background:radial-gradient(circle,rgba(90,112,230,.35),transparent 70%)}
+.hero-blob-b{bottom:-160px;left:-60px;width:420px;height:420px;background:radial-gradient(circle,rgba(90,112,230,.18),transparent 70%)}
+.hero-inner{max-width:1120px;margin:0 auto;padding:40px 24px 64px;position:relative;z-index:1}
+.hero-inner h1{color:#fff;font-size:27px;line-height:1.5;font-weight:800;letter-spacing:-.01em;margin:0 0 14px;max-width:720px}
+.hero-lead{max-width:720px;color:#c2caf1;font-size:14.5px;line-height:1.85;margin:0 0 10px}
+.hero-lead b{color:#fff}
+.hero-sub{max-width:720px;font-size:13px;color:#9aa4d9;margin:0 0 30px;line-height:1.8}
+
+.hero-carousel-wrap{max-width:1000px;position:relative;margin:0 0 28px;padding:0 44px}
+.hero-carousel{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;scrollbar-width:none}
+.hero-carousel::-webkit-scrollbar{display:none}
+.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-decoration:none;text-align:center}
+.hero-car-card:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.36)}
+.hero-car-logo{width:80px;height:80px;border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#22399e;overflow:hidden;box-shadow:0 8px 22px rgba(6,8,26,.28)}
+.hero-car-name{font-size:14.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
+.hero-car-industry{font-size:11.5px;color:#9aa4d9;margin-top:-8px}
+.hero-car-cta{margin-top:auto;font-size:12px;font-weight:700;color:#a9b6ff}
+.hero-car-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.26);background:rgba(13,15,36,.82);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.hero-car-btn:hover{background:#2f4bd6}
+.hero-car-prev{left:0}
+.hero-car-next{right:0}
+
+.hero-cta-row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:36px}
+.hero-cta-primary{display:inline-flex;align-items:center;font-weight:800;color:#fff;background:linear-gradient(120deg,#2f4bd6,#5570e6);padding:13px 26px;border-radius:999px;text-decoration:none;font-size:14.5px;box-shadow:0 6px 18px rgba(47,75,214,.28)}
+.hero-cta-secondary{display:inline-flex;align-items:center;font-weight:700;color:#cfd4ef;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.24);padding:12px 25px;border-radius:999px;text-decoration:none;font-size:14.5px}
+.hero-stats{display:flex;gap:14px;flex-wrap:wrap}
+.hero-stat{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);border-radius:12px;padding:16px 22px;min-width:140px}
+.hero-stat-value{font-size:24px;font-weight:800;color:#fff;font-variant-numeric:tabular-nums}
+.hero-stat-label{font-size:12.5px;color:#9aa4d9;margin-top:4px}
+
+/* ---- トップページ：診断カード・ランキングリンク ---- */
+.idx-main{padding-top:8px}
+.idx-diagnosis{margin:40px 0;background:linear-gradient(140deg,#f4f6ff 0%,#eef1fc 55%,#f7f4ff 100%);border:1px solid #dfe4f6;border-radius:20px;padding:32px;display:grid;grid-template-columns:1.3fr 1fr;gap:28px;align-items:center}
+.idx-diagnosis h2{margin:0 0 12px;border-bottom:none;padding-bottom:0}
+.idx-diagnosis-axes{display:flex;flex-direction:column;gap:10px}
+.idx-axis{display:grid;grid-template-columns:6.5em 1fr;gap:10px;align-items:center}
+.idx-axis-name{font-size:13px;font-weight:700}
+.idx-axis-bar{background:#e3e6ec;border-radius:999px;height:9px;overflow:hidden}
+.idx-axis-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#2f4bd6,#6f8bff)}
+
+.idx-ranklinks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px}
+.idx-ranklink{display:block;background:#fff;border:1px solid #e3e6ec;border-radius:14px;padding:16px 18px;text-decoration:none;color:#12141f}
+.idx-ranklink:hover{border-color:#c9d2ee;box-shadow:var(--shadow-lift)}
+.idx-ranklink-title{font-weight:700;font-size:14px}
+.idx-ranklink-note{font-size:12.5px;color:#66707f;margin-top:5px}
+
+@media(max-width:700px){
+  .idx-diagnosis{grid-template-columns:1fr}
+  .hero-inner h1{font-size:22px}
+}
