@@ -2,12 +2,25 @@
   "use strict";
   var base = document.body.getAttribute("data-base") || "";
   var dataPromise = null;
+  var koumuPromise = null;
 
   function loadData() {
     if (!dataPromise) {
       dataPromise = fetch(base + "data/companies.json").then(function (r) { return r.json(); });
     }
     return dataPromise;
+  }
+
+  // 官公庁・政府系（data/koumu/、koumu.py が書き出す）。検索窓だけが使うので
+  // loadData() とは別キャッシュにし、企業データ側（比較ページ等）に影響を与えない。
+  function loadKoumu() {
+    if (!koumuPromise) {
+      // koumu.json が無くても（官公庁データ未生成等）検索全体を止めない
+      koumuPromise = fetch(base + "data/koumu.json")
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .catch(function () { return []; });
+    }
+    return koumuPromise;
   }
 
   function esc(s) {
@@ -38,25 +51,25 @@
   function initSearch() {
     var widgets = document.querySelectorAll(".site-search");
     if (!widgets.length) return;
-    loadData().then(function (data) {
-      widgets.forEach(function (w) { wireWidget(w, data.companies); });
+    Promise.all([loadData(), loadKoumu()]).then(function (results) {
+      widgets.forEach(function (w) { wireWidget(w, results[0].companies, results[1]); });
     });
   }
 
-  function wireWidget(widget, companies) {
+  function wireWidget(widget, companies, koumu) {
     var input = widget.querySelector(".search-input");
     var results = widget.querySelector(".search-results");
     var activeIndex = -1;
 
     function render(matches) {
       if (!matches.length) {
-        results.innerHTML = '<div class="sr-empty">一致する企業がありません</div>';
+        results.innerHTML = '<div class="sr-empty">一致する企業・機関がありません</div>';
         results.hidden = false;
         return;
       }
-      results.innerHTML = matches.map(function (c) {
-        return '<a href="' + base + "kigyou/" + c.slug + '.html">' + logoImg(c.icon) + '<span>' + esc(c.name) +
-          '</span><span class="sr-group">' + esc(c.group) + "</span></a>";
+      results.innerHTML = matches.map(function (m) {
+        return '<a href="' + m.href + '">' + logoImg(m.icon) + '<span>' + esc(m.name) +
+          '</span><span class="sr-group">' + esc(m.group) + "</span></a>";
       }).join("");
       results.hidden = false;
       activeIndex = -1;
@@ -65,12 +78,22 @@
     function search(q) {
       q = q.trim().toLowerCase();
       if (!q) { results.hidden = true; results.innerHTML = ""; return; }
-      var matches = companies.filter(function (c) {
+      var companyMatches = companies.filter(function (c) {
         return c.name.toLowerCase().indexOf(q) !== -1 ||
           c.slug.toLowerCase().indexOf(q) !== -1 ||
           c.group.toLowerCase().indexOf(q) !== -1;
-      }).slice(0, 8);
-      render(matches);
+      }).map(function (c) {
+        return { name: c.name, icon: c.icon, group: c.group, href: base + "kigyou/" + c.slug + ".html" };
+      });
+      var koumuMatches = koumu.filter(function (e) {
+        return e.name.toLowerCase().indexOf(q) !== -1 ||
+          e.slug.toLowerCase().indexOf(q) !== -1 ||
+          e.group.toLowerCase().indexOf(q) !== -1 ||
+          (e.alias && e.alias.toLowerCase().indexOf(q) !== -1);
+      }).map(function (e) {
+        return { name: e.name, icon: e.icon, group: e.group, href: base + "koumu/" + e.slug + ".html" };
+      });
+      render(companyMatches.concat(koumuMatches).slice(0, 8));
     }
 
     input.addEventListener("input", function () { search(input.value); });

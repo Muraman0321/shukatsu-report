@@ -29,6 +29,13 @@ KIND_LABEL = {
     "独立行政法人": "独立行政法人",
     "政府系金融機関": "政府系金融機関・日本銀行",
 }
+# サイト内検索で「政府機関」「官公庁」のような総称語を打っても該当種別がヒットするための別名。
+# 個別の機関名一致に加えて、この語のどれかが部分一致すればヒットする（generate.py の initSearch が使う）
+KIND_ALIAS = {
+    "省庁": "政府機関 官公庁 省庁",
+    "独立行政法人": "政府機関 官公庁 独立行政法人 独法",
+    "政府系金融機関": "政府機関 官公庁 政府系金融機関 日本銀行",
+}
 FIELD_LABEL = {"conditions": "条件", "overview": "概要", "timing": "時期"}
 PROCESSING_NOTICE = (
     "本ページの内容は、人事院・各府省・独立行政法人等が公表している採用情報・"
@@ -168,7 +175,7 @@ def entity_page(g, entity: dict, common: dict, fetched: str) -> str:
     body = f"""
 <nav class="crumb"><a href="../index.html">トップ</a> › <a href="index.html">官公庁・政府系</a> › {g.e(name)}</nav>
 
-<h1>{g.e(name)}</h1>
+<h1>{g.logo_img(entity.get("icon"), 28)}{g.e(name)}</h1>
 <p class="lead small">{g.e(kicker)}</p>
 {tf_html}
 
@@ -193,13 +200,17 @@ def entity_page(g, entity: dict, common: dict, fetched: str) -> str:
 
 # ---------------------------------------------------------------- 一覧ページ
 
+def entity_link(g, e: dict) -> str:
+    """一覧での機関リンク1件ぶん。ロゴと機関名を1つの要素にまとめているのは、
+    .koumu-list a が display:flex;justify-content:space-between のため
+    （3分割にすると名前が右に寄ってレイアウトが崩れる）。"""
+    logo = g.logo_img(e.get("icon"), 16)
+    flag = '<span class="koumu-flag">募集ページ未確認</span>' if not e.get("tracks") else ""
+    return f'<a href="{g.e(e["slug"])}.html"><span class="koumu-name">{logo}{g.e(e["name"])}</span>{flag}</a>'
+
+
 def group_block(g, title: str, items: list[dict]) -> str:
-    links = "".join(
-        f'<a href="{g.e(e["slug"])}.html">{g.e(e["name"])}'
-        + ('<span class="koumu-flag">募集ページ未確認</span>' if not e.get("tracks") else "")
-        + "</a>"
-        for e in items
-    )
+    links = "".join(entity_link(g, e) for e in items)
     return f"""<details>
 <summary>{g.e(title)}（{len(items)}）</summary>
 <div class="koumu-list">{links}</div>
@@ -224,12 +235,7 @@ def index_page(g, entities: list[dict], fetched: str) -> str:
 
     shocho_html = "".join(group_block(g, k, v) for k, v in shocho_groups.items())
     dokuho_html = "".join(group_block(g, k, v) for k, v in dokuho_groups.items())
-    kinyu_html = "".join(
-        f'<a href="{g.e(e["slug"])}.html">{g.e(e["name"])}'
-        + ('<span class="koumu-flag">募集ページ未確認</span>' if not e.get("tracks") else "")
-        + "</a>"
-        for e in kinyu
-    )
+    kinyu_html = "".join(entity_link(g, e) for e in kinyu)
 
     n_no_track = sum(1 for e in entities if not e.get("tracks"))
 
@@ -271,6 +277,23 @@ def index_page(g, entities: list[dict], fetched: str) -> str:
     return g.page(title, desc, body, depth=1, canonical="/koumu/index.html")
 
 
+# ---------------------------------------------------------------- 検索用バンドル
+
+def search_bundle(entities: list[dict]) -> list[dict]:
+    """サイト内検索（generate.py の APP_JS 内 initSearch）が読む軽量な一覧。
+    HTMLには焼き込まず、site/data/koumu.json として別出しする（saiyo.json と同じ考え方）。"""
+    return [
+        {
+            "slug": e["slug"],
+            "name": e["name"],
+            "icon": e.get("icon"),
+            "group": KIND_LABEL.get(e["kind"], e["kind"]),
+            "alias": KIND_ALIAS.get(e["kind"], ""),
+        }
+        for e in entities
+    ]
+
+
 # ---------------------------------------------------------------- build
 
 def build(g, fetched: str, site: Path) -> list[str]:
@@ -291,5 +314,9 @@ def build(g, fetched: str, site: Path) -> list[str]:
         urls.append(f"/koumu/{ent['slug']}.html")
         if not ent.get("tracks"):
             n_no_track += 1
+
+    (site / "data" / "koumu.json").write_text(
+        json.dumps(search_bundle(entities), ensure_ascii=False, separators=(",", ":")), encoding="utf-8"
+    )
     print(f"  官公庁・政府系 {len(entities)}機関（募集ページ未確認 {n_no_track}機関）→ /koumu/")
     return urls
