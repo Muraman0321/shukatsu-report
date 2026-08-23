@@ -1539,6 +1539,32 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
 </a>"""
 
     car_cards = "".join(_car_card(k, x) for k, x in featured_items)
+
+    # ---- 官公庁・政府系セクション（2026-08-23 追加）----
+    # ヒーローカルーセルの固定枠には内閣府・JETRO・日本政策投資銀行の3機関しか出ないため、
+    # 126機関全件を種別ごとにグループ化して専用セクションで出す。koumu.entity_link() は
+    # koumu/index.html の一覧と同じ描画関数（公式サイト・採用ページの直リンク付き）を再利用する。
+    koumu_entities = koumu_loaded[0] if koumu_loaded else []
+    _koumu_kind_order = ["省庁", "独立行政法人", "政府系金融機関"]
+    koumu_groups_html = "".join(
+        f"""<div class="koumu-groups-flat">
+<h3>{e(koumu.KIND_LABEL.get(kind, kind))}（{len([x for x in koumu_entities if x["kind"] == kind])}）</h3>
+<div class="koumu-list">{"".join(koumu.entity_link(sys.modules[__name__], x) for x in koumu_entities if x["kind"] == kind)}</div>
+</div>"""
+        for kind in _koumu_kind_order
+    )
+    koumu_section_html = ""
+    if koumu_entities:
+        n_shocho = len([x for x in koumu_entities if x["kind"] == "省庁"])
+        n_dokuho = len([x for x in koumu_entities if x["kind"] == "独立行政法人"])
+        n_kinyu = len([x for x in koumu_entities if x["kind"] == "政府系金融機関"])
+        koumu_section_html = f"""<section>
+<h2>官公庁・政府系</h2>
+<p>省庁{n_shocho}機関・新卒採用を行う独立行政法人{n_dokuho}法人・政府系金融機関{n_kinyu}機関の
+新卒採用トラックと給与水準を、人事院や各機関の公式発表だけをもとにまとめています。</p>
+{koumu_groups_html}
+<p class="showcase-cta"><a class="cta" href="koumu/index.html">官公庁・政府系をすべて見る →</a></p>
+</section>"""
     carousel_html = f"""<div class="hero-carousel-wrap">
 <div class="hero-carousel chip-scroll" id="hero-carousel">{car_cards}{car_cards}</div>
 <button type="button" class="hero-car-btn hero-car-prev" aria-label="前へ">‹</button>
@@ -1608,6 +1634,8 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 <p>業界をまたいで並べたり、条件で絞り込んだりできます。掲載企業から広告費を受け取っていないので、企業に不利な順位もそのまま出します。</p>
 <div class="idx-ranklinks">{ranklinks_html}</div>
 </section>
+
+{koumu_section_html}
 
 <section class="showcase" id="showcase">
 <h2>業界を選んで、企業を流し見る</h2>
@@ -1946,9 +1974,15 @@ footer.site>p{max-width:960px;margin:6px auto}
 .koumu-groups summary:after{content:"+";float:right;color:var(--mut);font-weight:400}
 .koumu-groups details[open] summary:after{content:"−"}
 .koumu-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:2px;padding:2px 16px 14px;border-top:1px solid var(--line)}
-.koumu-list a{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;padding:7px 0;color:var(--fg);text-decoration:none;border-bottom:1px dashed var(--line)}
-.koumu-list a:hover{color:var(--link)}
+.koumu-list .koumu-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13.5px;padding:7px 0;border-bottom:1px dashed var(--line)}
+.koumu-row-link{display:flex;align-items:center;gap:8px;min-width:0;color:var(--fg);text-decoration:none}
+.koumu-row-link:hover{color:var(--link)}
 .koumu-list .koumu-flag{font-size:11px;color:var(--mut);white-space:nowrap}
+.koumu-inline-links{display:flex;gap:4px;flex:0 0 auto}
+.koumu-inline-link{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 8px;text-decoration:none;white-space:nowrap}
+.koumu-inline-link:hover{color:var(--link);border-color:var(--link)}
+.koumu-groups-flat{margin:18px 0}
+.koumu-groups-flat h3{font-size:15px;margin:0 0 4px}
 .koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}

@@ -19,6 +19,7 @@ data/koumu/_master.json が無い（＝データ収集をまだ行っていな�
 from __future__ import annotations
 
 import json
+import urllib.parse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -129,6 +130,29 @@ def salary_html(g, entity: dict, common: dict) -> str:
     return f'<table class="kv">{table}</table>{note}'
 
 
+def links_html(g, entity: dict) -> str:
+    """公式サイト・採用ホームページのボタン。company_page()（generate.py 815〜828行目）と
+    同じCSSクラス（cp-official/cp-recruit/cp-recruit-note）をそのまま使う。"""
+    official = entity.get("official")
+    if not official:
+        return ""
+    host = urllib.parse.urlsplit(official).netloc.removeprefix("www.")
+    parts = [
+        f'<a class="cp-official" href="{g.e(official)}" rel="nofollow noopener" target="_blank">'
+        f'公式サイト<span class="cp-action-host">{g.e(host)}</span></a>'
+    ]
+    recruit = entity.get("recruit")
+    if recruit:
+        rhost = urllib.parse.urlsplit(recruit).netloc.removeprefix("www.")
+        parts.append(
+            f'<a class="cp-recruit" href="{g.e(recruit)}" rel="nofollow noopener" target="_blank">'
+            f'採用ホームページ<span class="cp-action-host">{g.e(rhost)}</span></a>'
+        )
+    else:
+        parts.append('<p class="cp-recruit-note">採用ページは見つけられませんでした。</p>')
+    return f'<div class="cp-identity-actions">{"".join(parts)}</div>'
+
+
 def source_list_html(g, entity: dict) -> str:
     urls = list(entity.get("source_urls") or [])
     s = entity.get("salary")
@@ -177,6 +201,7 @@ def entity_page(g, entity: dict, common: dict, fetched: str) -> str:
 
 <h1>{g.logo_img(entity.get("icon"), 28)}{g.e(name)}</h1>
 <p class="lead small">{g.e(kicker)}</p>
+{links_html(g, entity)}
 {tf_html}
 
 <h2>新卒採用トラック</h2>
@@ -201,12 +226,28 @@ def entity_page(g, entity: dict, common: dict, fetched: str) -> str:
 # ---------------------------------------------------------------- 一覧ページ
 
 def entity_link(g, e: dict) -> str:
-    """一覧での機関リンク1件ぶん。ロゴと機関名を1つの要素にまとめているのは、
-    .koumu-list a が display:flex;justify-content:space-between のため
-    （3分割にすると名前が右に寄ってレイアウトが崩れる）。"""
+    """一覧での機関1件ぶん。機関名は詳細ページへのリンク、右側に公式サイト・採用ページへの
+    小さな直リンクを添える。<a>は入れ子にできないため、行全体を.koumu-rowにして
+    名前用の<a>と外部リンク用の<a>を並べる構成にしている（以前は行全体が1つの<a>だった）。"""
     logo = g.logo_img(e.get("icon"), 16)
     flag = '<span class="koumu-flag">募集ページ未確認</span>' if not e.get("tracks") else ""
-    return f'<a href="{g.e(e["slug"])}.html"><span class="koumu-name">{logo}{g.e(e["name"])}</span>{flag}</a>'
+    name_link = (
+        f'<a class="koumu-row-link" href="{g.e(e["slug"])}.html">'
+        f'<span class="koumu-name">{logo}{g.e(e["name"])}</span>{flag}</a>'
+    )
+    inline = []
+    if e.get("official"):
+        inline.append(
+            f'<a class="koumu-inline-link" href="{g.e(e["official"])}" '
+            f'rel="nofollow noopener" target="_blank">公式</a>'
+        )
+    if e.get("recruit"):
+        inline.append(
+            f'<a class="koumu-inline-link" href="{g.e(e["recruit"])}" '
+            f'rel="nofollow noopener" target="_blank">採用</a>'
+        )
+    inline_html = f'<span class="koumu-inline-links">{"".join(inline)}</span>' if inline else ""
+    return f'<div class="koumu-row">{name_link}{inline_html}</div>'
 
 
 def group_block(g, title: str, items: list[dict]) -> str:

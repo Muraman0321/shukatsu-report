@@ -1,4 +1,5 @@
-"""官公庁・政府系126機関（data/koumu/）の公式サイトから、ロゴ用アイコンを集める。
+"""官公庁・政府系126機関（data/koumu/）の公式サイトから、ロゴ用アイコンと採用ページの
+候補リンクを集める。
 
 fetch_links.py の企業版と全く同じ考え方・同じ関数を使う。違うのは公式サイトURLの特定方法だけ：
 企業側は法人番号でWikidataを突合して自動特定するが、省庁は法人番号を持たず、独立行政法人は
@@ -9,6 +10,12 @@ data/links/koumu_official.json（機関ごとに人手で確認したURL）を�
 SVG/apple-touch-icon優遇・実在と解像度の確認）は fetch_links.py の
 robots_allows() / find_icon() をそのまま import して使う。ロジックの二重管理を避けるため。
 
+採用ページは企業側のように pick_recruit_link() で1件に断定しない。省庁・独立行政法人の
+サイトは「採用」の表記が企業サイトほど定型的でなく、正規表現の1位判定だけでは誤検出・
+取りこぼしの懸念があるため、スコア>0の候補を最大10件そのまま残し（candidate_links()）、
+最終判断はGemini（AI Studioへの手動バッチ）に委ねる。判断材料の抽出だけ、企業側と同じ
+正規表現（HREF_HINT・RECRUIT_TEXT等）を再利用する。
+
 使い方:
     python fetch_koumu_links.py            # data/links/koumu_official.json → data/links/koumu_icons.json
     python fetch_koumu_links.py --limit 10 # お試し実行
@@ -17,6 +24,7 @@ robots_allows() / find_icon() をそのまま import して使う。ロジック
 from __future__ import annotations
 
 import json
+import re
 import sys
 import time
 import urllib.parse
@@ -24,7 +32,19 @@ from pathlib import Path
 
 import requests
 
-from fetch_links import POLITE_DELAY, TIMEOUT, UA, find_icon, log, robots_allows
+from fetch_links import (
+    DATED_URL,
+    HREF_HINT,
+    NEGATIVE,
+    POLITE_DELAY,
+    RECRUIT_TEXT,
+    STRONG_TEXT,
+    TIMEOUT,
+    UA,
+    find_icon,
+    log,
+    robots_allows,
+)
 
 ROOT = Path(__file__).resolve().parent
 OFFICIAL_JSON = ROOT / "data" / "links" / "koumu_official.json"
@@ -33,11 +53,58 @@ OUT_JSON = ROOT / "data" / "links" / "koumu_icons.json"
 PERMANENT_FAIL = ("robots.txt により対象外",)
 
 
+def candidate_links(html: str, base: str, limit: int = 10) -> list[dict]:
+    """採用ページの候補を最大 limit 件、スコア降順で返す（Geminiに判断させるための下ごしらえ）。
+
+    pick_recruit_link() と全く同じ採点ロジック（fetch_links.py の正規表現をそのまま使う）だが、
+    1件に絞らず候補を残す。ここでは決めない。
+    """
+    scored: list[tuple[int, str, str]] = []
+    for m in re.finditer(r"<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>(.*?)</a>", html, re.S | re.I):
+        href, inner = m.group(1), re.sub(r"<[^>]+>", "", m.group(2))
+        text = re.sub(r"\s+", "", inner)[:40]
+        if not href or href.startswith(("#", "mailto:", "javascript:", "tel:")):
+            continue
+        url = urllib.parse.urljoin(base, href)
+        if not url.startswith(("http://", "https://")):
+            continue
+        low = url.lower()
+
+        text_score = 0
+        for t in STRONG_TEXT:
+            if t in text:
+                text_score = max(text_score, 60 - STRONG_TEXT.index(t))
+        if text_score == 0:
+            for t in RECRUIT_TEXT:
+                if t in text.lower():
+                    text_score = max(text_score, 40 - RECRUIT_TEXT.index(t))
+        href_score = 40 if HREF_HINT.search(low) else 0
+        score = text_score + href_score
+        if score == 0:
+            continue
+        if DATED_URL.search(low):
+            score -= 35
+        if any(f"/{n}" in low for n in NEGATIVE) and score < 80:
+            continue
+        scored.append((score, url, text or "採用情報"))
+
+    seen: set[str] = set()
+    out: list[dict] = []
+    for score, url, text in sorted(scored, key=lambda x: -x[0]):
+        if url in seen:
+            continue
+        seen.add(url)
+        out.append({"url": url, "text": text})
+        if len(out) >= limit:
+            break
+    return out
+
+
 def _is_incomplete(rec: dict) -> bool:
     status = rec.get("status", "")
     if status in PERMANENT_FAIL or "HTTP 404" in status:
         return False
-    return "icon" not in rec
+    return "icon" not in rec or "candidates" not in rec
 
 
 def cmd_fetch(limit: int = 0) -> None:
@@ -76,6 +143,7 @@ def cmd_fetch(limit: int = 0) -> None:
                     r.encoding = r.apparent_encoding or r.encoding
                     time.sleep(POLITE_DELAY)
                     rec["icon"] = find_icon(sess, r.text, origin, r.url)
+                    rec["candidates"] = candidate_links(r.text, r.url)
                     rec["status"] = "取得済み" if rec["icon"] else "アイコンが見つからない"
             except requests.RequestException as e:
                 rec["status"] = f"取得できない（{type(e).__name__}）"
