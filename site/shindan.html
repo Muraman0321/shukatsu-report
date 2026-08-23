@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>就活の軸診断｜12問であなたが大事にしていることを出し、1,549社から合う会社を並べる</title>
-<meta name="description" content="12問の二者択一に答えると、就活で自分が何を優先しているかが8つの軸で出ます。その重みで有価証券報告書の数値だけを使い、1,549社を並べ替えます。性格診断ではありません。">
+<title>就活の軸診断｜学部・仕事タイプと12問から、あなたに合う会社を1,549社から並べる</title>
+<meta name="description" content="学部の系統とやりたい仕事のタイプを選び、12問の二者択一に答えると、就活で自分が何を優先しているかが8つの軸で出ます。その重みで有価証券報告書の数値だけを使い、1,549社を並べ替えます。性格診断ではありません。">
 <link rel="canonical" href="https://shukatsu-data.com/shindan.html">
-<meta property="og:title" content="就活の軸診断｜12問であなたが大事にしていることを出し、1,549社から合う会社を並べる">
-<meta property="og:description" content="12問の二者択一に答えると、就活で自分が何を優先しているかが8つの軸で出ます。その重みで有価証券報告書の数値だけを使い、1,549社を並べ替えます。性格診断ではありません。">
+<meta property="og:title" content="就活の軸診断｜学部・仕事タイプと12問から、あなたに合う会社を1,549社から並べる">
+<meta property="og:description" content="学部の系統とやりたい仕事のタイプを選び、12問の二者択一に答えると、就活で自分が何を優先しているかが8つの軸で出ます。その重みで有価証券報告書の数値だけを使い、1,549社を並べ替えます。性格診断ではありません。">
 <meta property="og:type" content="website">
-<link rel="stylesheet" href="style.css?v=16014caf">
-<script src="app.js?v=16014caf" defer></script>
+<link rel="stylesheet" href="style.css?v=1908db75">
+<script src="app.js?v=1908db75" defer></script>
 </head>
 <body data-base="">
 <header class="site">
@@ -22,7 +22,7 @@
     </svg>
     <span class="brand-word">Shukatsu.com</span>
   </a>
-  <nav class="header-nav"><a href="shindan.html">就活の軸診断</a><a href="tekisei.html">学部・興味から絞る</a><a href="ranking/index.html">ランキング</a><a href="koumu/index.html">官公庁・政府系</a><a href="hikaku.html">企業を選んで比較する →</a></nav>
+  <nav class="header-nav"><a href="shindan.html">就活の軸診断</a><a href="ranking/index.html">ランキング</a><a href="koumu/index.html">官公庁・政府系</a><a href="hikaku.html">企業を選んで比較する →</a></nav>
   <div class="site-search" data-pos="header">
   <input type="search" class="search-input" placeholder="企業名で検索（例：三菱商事）" autocomplete="off" aria-label="企業を検索">
   <div class="search-results" hidden></div>
@@ -34,23 +34,37 @@
 
 <h1>就活の軸診断</h1>
 <p class="lead">
-12問の二者択一に答えるだけで、<b>自分が就活で何を優先しているのか</b>が8つの軸で出ます。
-そのうえで、その重みを使って1,549社を並べ替えます。
+<b>学部の系統・やりたい仕事のタイプ</b>を選び、<b>12問の二者択一</b>に答えるだけで、
+自分が就活で何を優先しているのかが8つの軸で出ます。そのうえで、その重みを使って1,549社を並べ替えます。
 </p>
 <p class="lead small">
-これは性格診断ではありません。<b>このサイトが持っているのは有価証券報告書の数値だけ</b>で、
-人の性格や社風は測れません。やっているのは「あなたが選んだ重みで公的な数値を並べ替える」ことだけです。
+これは性格診断ではありません。<b>このサイトが持っているのは有価証券報告書の数値と、採用ページの原文だけ</b>で、
+人の性格や社風は測れません。やっているのは「あなたが選んだ条件・重みで公的な数値を絞り込み、並べ替える」ことだけです。
 当たる占いに見せるより、何をしているかが分かるほうがいいと考えています。
 </p>
 
 <div id="shindan" class="shindan" data-state="intro">
 
   <section class="sd-intro">
-    <p class="sd-meta">全12問・所要1分ほど／回答はブラウザの中だけで処理され、どこにも送信されません</p>
+    <p class="sd-meta">プロフィール選択＋全12問・所要2分ほど／回答はブラウザの中だけで処理され、どこにも送信されません</p>
     <button class="sd-start cta-btn" type="button">診断をはじめる</button>
   </section>
 
+  <section class="sd-profile" hidden>
+    <h2>1. あなたについて</h2>
+    <p class="lead small">
+    選ぶと、結果の会社一覧から<b>採用ページに実際に学部制限が書かれている会社のうち、明確に対象外の会社</b>を除きます。
+    記載が無い・まだ判定できていない会社は対象外と決めつけず、そのまま一覧に残します。
+    </p>
+    <h3>学部の系統</h3>
+    <div class="tk-optgrid sd-faculty"><button class="tk-opt" type="button" data-kind="faculty" data-key="bunkei"><b>文系</b><small>法・経済・商・経営・文学部など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="rikei_kougaku"><b>理系（工学・情報系）</b><small>工学・情報・機械・電気・電子など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="rikei_seimei"><b>理系（生命科学系）</b><small>薬学・農学・理学・生命科学・化学など</small></button><button class="tk-opt" type="button" data-kind="faculty" data-key="toranai"><b>決めていない／学部はあまり関係ない</b><small>文理不問で探したい</small></button></div>
+    <h3>やりたい仕事のタイプ（任意・最大2つ）</h3>
+    <div class="tk-optgrid sd-jobtype"><button class="tk-opt" type="button" data-kind="job" data-key="global"><b>海外・グローバルに関わる仕事</b><small>海外売上高比率が高い会社を優先して並べる</small></button><button class="tk-opt" type="button" data-kind="job" data-key="monodukuri"><b>ものづくり・技術で新しい価値をつくる仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="okane"><b>数字・お金を扱う仕事（金融・財務）</b></button><button class="tk-opt" type="button" data-kind="job" data-key="hito"><b>人と接する・サービスをつくる仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="kenkyu"><b>研究・専門性を極める仕事</b></button><button class="tk-opt" type="button" data-kind="job" data-key="infra"><b>社会の基盤（インフラ・物流・エネルギー）を支える仕事</b></button></div>
+    <button class="sd-profile-go tk-go cta-btn" type="button" disabled>次へ（12問の質問に進む）</button>
+  </section>
+
   <section class="sd-quiz" hidden>
+    <h2>2. 12問の質問</h2>
     <div class="sd-progress"><span class="sd-bar"></span></div>
     <p class="sd-count"><b class="sd-no">1</b> / 12</p>
     <p class="sd-lead">どちらにより惹かれますか</p>
@@ -66,14 +80,15 @@
     <h2>あなたが就活で大事にしていること</h2>
     <div class="sd-axes"></div>
     <p class="caveat sd-axes-note"></p>
+    <p class="caveat sd-profile-note"></p>
 
-    <h2>その重みで並べた1,549社</h2>
+    <h2>その条件で並べた会社</h2>
     <div class="sd-filters">
       <label><input type="checkbox" class="sd-nohd" checked> 持株会社を除く</label>
       <label>業界 <select class="sd-group"><option value="">すべて</option></select></label>
     </div>
     <div class="scroll"><table class="grid rank sd-table">
-      <thead><tr><th>順位</th><th>会社</th><th>適合度</th><th>上位の理由</th><th>業界</th></tr></thead>
+      <thead><tr><th>順位</th><th>会社</th><th>適合度</th><th>上位の理由</th><th>学部</th><th>業界</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <p class="caveat">
@@ -81,8 +96,13 @@
       数値が有価証券報告書に無い軸はその会社の計算から外しています（0や平均で埋めていません）。
       評価に使えた軸の数を各行に出しています。
     </p>
+    <p class="caveat">
+      「学部」欄で<b>出典付きのもの</b>は採用ページに実際に書かれていた文言です。出典が無いものは業界レベルの
+      一般的な傾向、または記載そのものが無いことを示すだけで、その会社の事実ではありません。
+    </p>
     <div class="sd-actions">
-      <button class="sd-retry" type="button">やり直す</button>
+      <button class="sd-retry" type="button">12問だけやり直す</button>
+      <button class="sd-profile-retry" type="button">学部・仕事タイプを選び直す</button>
     </div>
   </section>
 </div>
@@ -91,12 +111,20 @@
 <h2>この診断が使っている8つの軸</h2>
 <div class="scroll"><table class="grid">
 <thead><tr><th>軸</th><th>使っている数値</th><th>並べ方</th></tr></thead>
-<tbody><tr><th scope="row">給与の高さ</th><td>提出会社の平均年間給与。賞与・時間外手当を含む</td><td>高いほど上位</td></tr><tr><th scope="row">給与の伸び</th><td>直近5期の平均年間給与の増減率。算定基準が変わった会社は対象外</td><td>伸びているほど上位</td></tr><tr><th scope="row">長く働けるか</th><td>平均勤続年数。3年以内離職率は大手が開示していないための代理指標</td><td>長いほど上位</td></tr><tr><th scope="row">女性の管理職登用</th><td>管理職に占める女性労働者の割合</td><td>高いほど上位</td></tr><tr><th scope="row">男女の賃金差の小ささ</th><td>男性を100としたときの女性の賃金の割合。100に近いほど差が小さい</td><td>100に近いほど上位</td></tr><tr><th scope="row">海外で働く可能性</th><td>連結の売上のうち日本以外が占める割合。売上の出どころであって勤務地の内訳ではない</td><td>高いほど上位</td></tr><tr><th scope="row">会社の規模</th><td>連結従業員数</td><td>多いほど上位</td></tr><tr><th scope="row">財務の堅さ</th><td>自己資本比率。銀行業は業態上この値が小さくなる</td><td>高いほど上位</td></tr></tbody></table></div>
+<tbody><tr><th scope="row">給与の高さ</th><td>提出会社の平均年間給与。賞与・時間外手当を含む</td><td>高いほど上位</td></tr><tr><th scope="row">給与の伸び</th><td>直近5期の平均年間給与の増減率。算定基準が変わった会社は対象外</td><td>伸びているほど上位</td></tr><tr><th scope="row">長く働けるか</th><td>平均勤続年数。3年以内離職率は大手が開示していないための代理指標</td><td>長いほど上位</td></tr><tr><th scope="row">女性の管理職登用</th><td>管理職に占める女性労働者の割合</td><td>高いほど上位</td></tr><tr><th scope="row">男女の賃金差の小ささ</th><td>男性を100としたときの女性の賃金の割合。100に近いほど差が小さい</td><td>100に近いほど上位</td></tr><tr><th scope="row">海外駐在の可能性</th><td>連結売上のうち日本以外が占める割合を目安に使っている。海外駐在者数の開示は無いための代理指標で、勤務地の内訳ではなく売上の出どころ。対象は120/1,549社のみ</td><td>高いほど上位</td></tr><tr><th scope="row">会社の規模</th><td>連結従業員数</td><td>多いほど上位</td></tr><tr><th scope="row">財務の堅さ</th><td>自己資本比率。銀行業は業態上この値が小さくなる</td><td>高いほど上位</td></tr></tbody></table></div>
 <p class="caveat">
 <b>男性育休取得率は軸に入れていません。</b>原則方式と育児介護休業法施行規則71条の6第2号方式
 （育児目的休暇を含むため高く出る）の2方式が混在しており、方式をまたいで比べられないためです。
 <b>3年以内離職率も入れていません。</b>大手企業が公的に開示しておらず、代わりに平均勤続年数を使っています。
 </p>
+
+<h2>業界ごとの学部・仕事タイプの一般的な傾向</h2>
+<p class="lead small">恣意的な絞り込みに見えないよう、判断の根拠をそのまま出します。技術系採用の有無・研究開発の比重・
+資本集約か労働集約かなど業種の実態にもとづく機械的な対応づけで、個々の企業の採用方針を示すものではなく、
+結果の会社一覧を除外するためにも使っていません（除外は会社ごとの事実がある場合だけです）。</p>
+<div class="scroll"><table class="grid">
+<thead><tr><th>業界</th><th>対象学部の傾向</th><th>やりたい仕事との一致</th></tr></thead>
+<tbody><tr><th scope="row">その他製品</th><td>文系・理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">その他金融</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">ガス業</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">ガラス・土石</th><td>理系（工学・情報系）・理系（生命科学系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">ゴム製品</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">サービス業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">パルプ・紙</th><td>理系（工学・情報系）・理系（生命科学系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">不動産業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">保険業</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">倉庫運輸</th><td>文系・決めていない／学部はあまり関係ない</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">化学</th><td>理系（生命科学系）・理系（工学・情報系）</td><td>研究・専門性を極める仕事・ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">医薬品</th><td>理系（生命科学系）</td><td>研究・専門性を極める仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">卸売業</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">小売</th><td>文系・決めていない／学部はあまり関係ない</td><td>人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">建設業</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">情報・通信業</th><td>理系（工学・情報系）・文系・決めていない／学部はあまり関係ない</td><td>ものづくり・技術で新しい価値をつくる仕事・研究・専門性を極める仕事</td></tr><tr><th scope="row">機械</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">水産農林</th><td>理系（生命科学系）・文系</td><td>人と接する・サービスをつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">海運</th><td>文系・理系（工学・情報系）</td><td>海外・グローバルに関わる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">石油・石炭</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">空運</th><td>文系・決めていない／学部はあまり関係ない</td><td>海外・グローバルに関わる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">精密機器</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・研究・専門性を極める仕事</td></tr><tr><th scope="row">総合商社</th><td>文系・理系（工学・情報系）・理系（生命科学系）・決めていない／学部はあまり関係ない</td><td>海外・グローバルに関わる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">繊維製品</th><td>理系（生命科学系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">証券</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">輸送用機器</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">金属製品</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事</td></tr><tr><th scope="row">鉄鋼</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">鉱業</th><td>理系（工学・情報系）</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">銀行業</th><td>文系・決めていない／学部はあまり関係ない</td><td>数字・お金を扱う仕事（金融・財務）</td></tr><tr><th scope="row">陸運</th><td>文系・決めていない／学部はあまり関係ない</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事・人と接する・サービスをつくる仕事</td></tr><tr><th scope="row">電力</th><td>理系（工学・情報系）・文系</td><td>社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">電気機器</th><td>理系（工学・情報系）・文系</td><td>ものづくり・技術で新しい価値をつくる仕事・海外・グローバルに関わる仕事</td></tr><tr><th scope="row">非鉄金属</th><td>理系（工学・情報系）</td><td>ものづくり・技術で新しい価値をつくる仕事・社会の基盤（インフラ・物流・エネルギー）を支える仕事</td></tr><tr><th scope="row">食料品</th><td>文系・理系（生命科学系）</td><td>人と接する・サービスをつくる仕事・ものづくり・技術で新しい価値をつくる仕事</td></tr></tbody></table></div>
 <p class="caveat">データ取得日：2026-08-16</p>
 </section>
 
