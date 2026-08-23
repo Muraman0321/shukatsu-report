@@ -1522,21 +1522,39 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
             name, icon = x["name"], x.get("icon")
             industry = koumu.KIND_LABEL.get(x["kind"], x["kind"])
             href = f'koumu/{e(x["slug"])}.html'
+            official, recruit = x.get("official"), x.get("recruit")
         else:
             name, icon = x["short"], x.get("icon")
             industry = x["peer_group"]
             href = f'kigyou/{e(x["slug"])}.html'
+            c_links = x.get("links") or {}
+            official = c_links.get("official")
+            saiyo_urls = (x.get("saiyo") or {}).get("source_urls") or []
+            recruit = c_links.get("recruit") or (saiyo_urls[0] if saiyo_urls else None)
         initial = name[0] if name else "?"
         box = (
             f'<img src="{e(icon)}" alt="" width="60" height="60" style="width:60px;height:60px;object-fit:contain">'
             if icon else e(initial)
         )
-        return f"""<a class="hero-car-card" href="{href}">
+        car_links = []
+        if official:
+            car_links.append(
+                f'<a class="hero-car-link" href="{e(official)}" rel="nofollow noopener" target="_blank">HP</a>'
+            )
+        if recruit:
+            car_links.append(
+                f'<a class="hero-car-link" href="{e(recruit)}" rel="nofollow noopener" target="_blank">採用</a>'
+            )
+        car_links_html = f'<div class="hero-car-links">{"".join(car_links)}</div>' if car_links else ""
+        return f"""<div class="hero-car-card">
+<a class="hero-car-main" href="{href}">
 <div class="hero-car-logo">{box}</div>
 <div class="hero-car-name">{e(name)}</div>
 <div class="hero-car-industry">{e(industry)}</div>
 <div class="hero-car-cta">詳細を見てみる<span>→</span></div>
-</a>"""
+</a>
+{car_links_html}
+</div>"""
 
     car_cards = "".join(_car_card(k, x) for k, x in featured_items)
 
@@ -1546,13 +1564,25 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
     # koumu/index.html の一覧と同じ描画関数（公式サイト・採用ページの直リンク付き）を再利用する。
     koumu_entities = koumu_loaded[0] if koumu_loaded else []
     _koumu_kind_order = ["省庁", "独立行政法人", "政府系金融機関"]
-    koumu_groups_html = "".join(
-        f"""<div class="koumu-groups-flat">
-<h3>{e(koumu.KIND_LABEL.get(kind, kind))}（{len([x for x in koumu_entities if x["kind"] == kind])}）</h3>
-<div class="koumu-list">{"".join(koumu.entity_link(sys.modules[__name__], x) for x in koumu_entities if x["kind"] == kind)}</div>
+    _KOUMU_FLAT_PREVIEW_N = 3
+
+    def _koumu_group_flat(kind: str) -> str:
+        items = [x for x in koumu_entities if x["kind"] == kind]
+        head, rest = items[:_KOUMU_FLAT_PREVIEW_N], items[_KOUMU_FLAT_PREVIEW_N:]
+        head_html = "".join(koumu.entity_link(sys.modules[__name__], x) for x in head)
+        more_html = ""
+        if rest:
+            rest_html = "".join(koumu.entity_link(sys.modules[__name__], x) for x in rest)
+            more_html = f"""<details><summary>さらに表示（+{len(rest)}）</summary>
+<div class="koumu-list">{rest_html}</div>
+</details>"""
+        return f"""<div class="koumu-groups-flat">
+<h3>{e(koumu.KIND_LABEL.get(kind, kind))}（{len(items)}）</h3>
+<div class="koumu-list">{head_html}</div>
+{more_html}
 </div>"""
-        for kind in _koumu_kind_order
-    )
+
+    koumu_groups_html = "".join(_koumu_group_flat(kind) for kind in _koumu_kind_order)
     koumu_section_html = ""
     if koumu_entities:
         n_shocho = len([x for x in koumu_entities if x["kind"] == "省庁"])
@@ -1635,7 +1665,6 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 <div class="idx-ranklinks">{ranklinks_html}</div>
 </section>
 
-{koumu_section_html}
 
 <section class="showcase" id="showcase">
 <h2>業界を選んで、企業を流し見る</h2>
@@ -1644,6 +1673,8 @@ AIに数字を書かせていません。データが無い項目は推測で埋
 <div class="showcase-lanes">{"".join(lanes)}</div>
 {showcase_cta}
 </section>
+
+{koumu_section_html}
 
 <section>
 <h2>数字の読み方</h2>
@@ -1983,6 +2014,11 @@ footer.site>p{max-width:960px;margin:6px auto}
 .koumu-inline-link:hover{color:var(--link);border-color:var(--link)}
 .koumu-groups-flat{margin:18px 0}
 .koumu-groups-flat h3{font-size:15px;margin:0 0 4px}
+.koumu-groups-flat>details{margin-top:2px}
+.koumu-groups-flat>details>summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--link);list-style:none;padding:6px 0}
+.koumu-groups-flat>details>summary::-webkit-details-marker{display:none}
+.koumu-groups-flat>details>summary::before{content:"＋ "}
+.koumu-groups-flat>details[open]>summary::before{content:"− "}
 .koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
@@ -2158,12 +2194,16 @@ html,body{overflow-x:hidden}
 .hero-carousel-wrap{max-width:1000px;position:relative;margin:0 0 28px;padding:0 44px}
 .hero-carousel{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;scrollbar-width:none}
 .hero-carousel::-webkit-scrollbar{display:none}
-.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-decoration:none;text-align:center}
+.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-align:center}
 .hero-car-card:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.36)}
+.hero-car-main{display:flex;flex-direction:column;align-items:center;gap:12px;flex:1 1 auto;width:100%;text-decoration:none}
 .hero-car-logo{width:80px;height:80px;border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#22399e;overflow:hidden;box-shadow:0 8px 22px rgba(6,8,26,.28)}
 .hero-car-name{font-size:14.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
 .hero-car-industry{font-size:11.5px;color:#9aa4d9;margin-top:-8px}
 .hero-car-cta{margin-top:auto;font-size:12px;font-weight:700;color:#a9b6ff}
+.hero-car-links{display:flex;gap:6px}
+.hero-car-link{font-size:10.5px;font-weight:700;color:#c7cdf5;border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:3px 10px;text-decoration:none;white-space:nowrap}
+.hero-car-link:hover{color:#fff;border-color:#fff}
 .hero-car-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.26);background:rgba(13,15,36,.82);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hero-car-btn:hover{background:#2f4bd6}
 .hero-car-prev{left:0}

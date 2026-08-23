@@ -306,6 +306,11 @@ footer.site>p{max-width:960px;margin:6px auto}
 .koumu-inline-link:hover{color:var(--link);border-color:var(--link)}
 .koumu-groups-flat{margin:18px 0}
 .koumu-groups-flat h3{font-size:15px;margin:0 0 4px}
+.koumu-groups-flat>details{margin-top:2px}
+.koumu-groups-flat>details>summary{cursor:pointer;font-size:12.5px;font-weight:700;color:var(--link);list-style:none;padding:6px 0}
+.koumu-groups-flat>details>summary::-webkit-details-marker{display:none}
+.koumu-groups-flat>details>summary::before{content:"＋ "}
+.koumu-groups-flat>details[open]>summary::before{content:"− "}
 .koumu-flat{border-top:none;padding:2px 0 14px;margin:14px 0}
 #compare-result{margin-top:8px}
 @media(max-width:600px){h1{font-size:21px}main{padding:0 14px 48px}.kv th{width:9em;font-size:13px}.donuts{gap:16px;justify-content:space-between}.donut-item{width:88px}.brand-word{font-size:21px}.tagline{margin-left:32px}.hbar-row{grid-template-columns:6.5em 1fr 4.5em;gap:8px}.hbar-name{font-size:12.5px}.compare-checklist{grid-template-columns:1fr 1fr}}
@@ -481,12 +486,16 @@ html,body{overflow-x:hidden}
 .hero-carousel-wrap{max-width:1000px;position:relative;margin:0 0 28px;padding:0 44px}
 .hero-carousel{display:flex;gap:14px;overflow-x:auto;padding:4px 2px 16px;scrollbar-width:none}
 .hero-carousel::-webkit-scrollbar{display:none}
-.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:12px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-decoration:none;text-align:center}
+.hero-car-card{flex:0 0 auto;width:190px;display:flex;flex-direction:column;align-items:center;gap:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:22px 18px 18px;text-align:center}
 .hero-car-card:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.36)}
+.hero-car-main{display:flex;flex-direction:column;align-items:center;gap:12px;flex:1 1 auto;width:100%;text-decoration:none}
 .hero-car-logo{width:80px;height:80px;border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:800;color:#22399e;overflow:hidden;box-shadow:0 8px 22px rgba(6,8,26,.28)}
 .hero-car-name{font-size:14.5px;font-weight:800;color:#fff;letter-spacing:-.01em}
 .hero-car-industry{font-size:11.5px;color:#9aa4d9;margin-top:-8px}
 .hero-car-cta{margin-top:auto;font-size:12px;font-weight:700;color:#a9b6ff}
+.hero-car-links{display:flex;gap:6px}
+.hero-car-link{font-size:10.5px;font-weight:700;color:#c7cdf5;border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:3px 10px;text-decoration:none;white-space:nowrap}
+.hero-car-link:hover{color:#fff;border-color:#fff}
 .hero-car-btn{position:absolute;top:50%;transform:translateY(-50%);width:36px;height:36px;border-radius:50%;border:1px solid rgba(255,255,255,.26);background:rgba(13,15,36,.82);color:#fff;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
 .hero-car-btn:hover{background:#2f4bd6}
 .hero-car-prev{left:0}
