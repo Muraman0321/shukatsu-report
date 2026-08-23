@@ -1479,27 +1479,66 @@ def index_page(companies: list[dict], groups: dict[str, list[dict]], fetched: st
     )
 
     # ---- ヒーローカルーセル（注目企業）----
-    # 表示企業は平均年間給与トップ10社。サイトが既に公開している「平均年収ランキング」と
-    # 同じ基準を借用しており、恣意的な選定を持ち込まない。
-    salaried = [x for x in companies if x["latest"]["reporting_company"]["average_annual_salary_yen"] is not None]
-    featured = sorted(
-        salaried, key=lambda x: -x["latest"]["reporting_company"]["average_annual_salary_yen"]
-    )[:10]
+    # 固定6社・機関（三井物産・内閣府・JETRO・日本政策投資銀行・三井不動産・ヒューリック）に加え、
+    # 「年収が業界4位以内・ロゴが判明・採用ホームページが判明」の3条件を満たす企業を
+    # 平均年収の高い順に追加して、合計20件ほどになるよう選ぶ（2026-08-23 依頼）。
+    FEATURED_FIXED_SLUGS = ["mitsui-bussan", "naikakufu", "jetro", "dbj", "mitsui-fudosan", "hulic"]
+    FEATURED_TOTAL = 20
 
-    def _car_card(x: dict) -> str:
-        initial = x["short"][0] if x["short"] else "?"
+    koumu_loaded = koumu.load_koumu()
+    koumu_by_slug = {x["slug"]: x for x in (koumu_loaded[0] if koumu_loaded else [])}
+    companies_by_slug = {x["slug"]: x for x in companies}
+
+    def _has_recruit(c: dict) -> bool:
+        links = c.get("links") or {}
+        return bool(links.get("recruit")) or bool((c.get("saiyo") or {}).get("source_urls"))
+
+    def _meets_conditions(c: dict) -> bool:
+        if not c.get("icon") or not (c.get("links") or {}).get("official") or not _has_recruit(c):
+            return False
+        salary = c["latest"]["reporting_company"]["average_annual_salary_yen"]
+        if salary is None:
+            return False
+        rank, _total = peer_rank(c, groups[c["peer_group"]], "average_annual_salary_yen")
+        return rank is not None and rank <= 4
+
+    fixed_items = []
+    for slug in FEATURED_FIXED_SLUGS:
+        if slug in companies_by_slug:
+            fixed_items.append(("company", companies_by_slug[slug]))
+        elif slug in koumu_by_slug:
+            fixed_items.append(("koumu", koumu_by_slug[slug]))
+
+    fixed_slugs = {slug for slug in FEATURED_FIXED_SLUGS}
+    candidates = sorted(
+        (c for c in companies if c["slug"] not in fixed_slugs and _meets_conditions(c)),
+        key=lambda c: -c["latest"]["reporting_company"]["average_annual_salary_yen"],
+    )
+    extra_n = max(0, FEATURED_TOTAL - len(fixed_items))
+    featured_items = fixed_items + [("company", c) for c in candidates[:extra_n]]
+
+    def _car_card(card_kind: str, x: dict) -> str:
+        if card_kind == "koumu":
+            name, icon = x["name"], x.get("icon")
+            industry = koumu.KIND_LABEL.get(x["kind"], x["kind"])
+            href = f'koumu/{e(x["slug"])}.html'
+        else:
+            name, icon = x["short"], x.get("icon")
+            industry = x["peer_group"]
+            href = f'kigyou/{e(x["slug"])}.html'
+        initial = name[0] if name else "?"
         box = (
-            f'<img src="{e(x["icon"])}" alt="" width="60" height="60" style="width:60px;height:60px;object-fit:contain">'
-            if x["icon"] else e(initial)
+            f'<img src="{e(icon)}" alt="" width="60" height="60" style="width:60px;height:60px;object-fit:contain">'
+            if icon else e(initial)
         )
-        return f"""<a class="hero-car-card" href="kigyou/{e(x["slug"])}.html">
+        return f"""<a class="hero-car-card" href="{href}">
 <div class="hero-car-logo">{box}</div>
-<div class="hero-car-name">{e(x["short"])}</div>
-<div class="hero-car-industry">{e(x["peer_group"])}</div>
+<div class="hero-car-name">{e(name)}</div>
+<div class="hero-car-industry">{e(industry)}</div>
 <div class="hero-car-cta">詳細を見てみる<span>→</span></div>
 </a>"""
 
-    car_cards = "".join(_car_card(x) for x in featured)
+    car_cards = "".join(_car_card(k, x) for k, x in featured_items)
     carousel_html = f"""<div class="hero-carousel-wrap">
 <div class="hero-carousel chip-scroll" id="hero-carousel">{car_cards}{car_cards}</div>
 <button type="button" class="hero-car-btn hero-car-prev" aria-label="前へ">‹</button>
