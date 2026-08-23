@@ -51,7 +51,7 @@ header.site>*{max-width:960px;margin:0 auto;padding:0 20px}
 .header-nav{margin-left:38px;padding-bottom:14px}
 .header-nav a{color:#c2caf1;font-size:13px;font-weight:700;text-decoration:none}
 .header-nav a:hover{color:#fff}
-header.site .site-search{margin-left:38px;padding-bottom:20px;max-width:360px}
+header.site .site-search{margin-left:max(38px,calc(50% - 442px));padding-bottom:20px;max-width:360px}
 header.site .search-input{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:7px;padding:8px 12px;font-size:13.5px}
 header.site .search-input::placeholder{color:#aab0d6}
 header.site .search-input:focus{outline:2px solid rgba(255,255,255,.5);outline-offset:1px}
@@ -282,6 +282,16 @@ footer.site>p{max-width:960px;margin:6px auto}
 .compare-toolbar button{font:inherit;font-weight:700;font-size:13.5px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--card);cursor:pointer}
 .compare-toolbar button:hover{border-color:#c7cff0}
 .compare-count{font-size:13px;color:var(--mut)}
+.compare-picker{position:relative;margin:0 0 10px}
+.compare-picker-input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--fg);border-radius:7px;padding:9px 12px;font-size:14px}
+.compare-picker-input:focus{outline:2px solid rgba(47,75,214,.35);outline-offset:1px}
+.search-results .cpr-item{display:flex;width:100%;justify-content:space-between;gap:10px;padding:9px 12px;color:var(--fg);text-align:left;font:inherit;background:none;border:none;border-bottom:1px solid var(--line);cursor:pointer}
+.search-results .cpr-item:last-child{border-bottom:none}
+.search-results .cpr-item:hover,.search-results .cpr-item.active{background:#eef1fc}
+.compare-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.compare-chip{display:inline-flex;align-items:center;gap:6px;background:var(--note);border:1px solid #d7ddf7;border-radius:999px;padding:4px 6px 4px 10px;font-size:13px}
+.compare-chip button{border:none;background:none;color:var(--mut);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:999px}
+.compare-chip button:hover{background:rgba(0,0,0,.08);color:var(--fg)}
 .compare-groups{margin:8px 0 20px}
 .compare-groups details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden}
 .compare-groups summary{padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}

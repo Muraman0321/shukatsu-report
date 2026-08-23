@@ -135,6 +135,9 @@
     var countEl = document.getElementById("compare-count");
     var clearBtn = document.getElementById("compare-clear");
     var checkboxes = root.querySelectorAll('input[type="checkbox"][data-slug]');
+    var pickerInput = document.getElementById("compare-picker-input");
+    var pickerResults = document.getElementById("compare-picker-results");
+    var chipsEl = document.getElementById("compare-chips");
 
     loadData().then(function (data) {
       var bySlug = {};
@@ -144,6 +147,111 @@
         return Array.prototype.slice.call(checkboxes)
           .filter(function (cb) { return cb.checked; })
           .map(function (cb) { return cb.dataset.slug; });
+      }
+
+      function setChecked(slug, checked) {
+        var cb = root.querySelector('input[type="checkbox"][data-slug="' + slug + '"]');
+        if (!cb) return;
+        cb.checked = checked;
+        if (checked) {
+          var det = cb.closest("details");
+          if (det) det.open = true;
+        }
+      }
+
+      function renderChips() {
+        if (!chipsEl) return;
+        var slugs = selectedSlugs();
+        if (!slugs.length) { chipsEl.hidden = true; chipsEl.innerHTML = ""; return; }
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = slugs.map(function (s) {
+          var c = bySlug[s];
+          if (!c) return "";
+          return '<span class="compare-chip">' + logoImg(c.icon) + "<span>" + esc(c.short || c.name) +
+            '</span><button type="button" data-remove="' + esc(s) + '" aria-label="' + esc(c.name) + 'を比較から外す">×</button></span>';
+        }).join("");
+      }
+
+      if (chipsEl) {
+        chipsEl.addEventListener("click", function (ev) {
+          var btn = ev.target.closest("button[data-remove]");
+          if (!btn) return;
+          setChecked(btn.dataset.remove, false);
+          render();
+        });
+      }
+
+      if (pickerInput && pickerResults) {
+        var pickerActiveIndex = -1;
+
+        function pickerRender(matches) {
+          if (!matches.length) {
+            pickerResults.innerHTML = '<div class="sr-empty">一致する企業がありません</div>';
+            pickerResults.hidden = false;
+            return;
+          }
+          pickerResults.innerHTML = matches.map(function (c) {
+            return '<button type="button" class="cpr-item" data-slug="' + esc(c.slug) + '">' +
+              logoImg(c.icon) + "<span>" + esc(c.name) + '</span><span class="sr-group">' + esc(c.group) + "</span></button>";
+          }).join("");
+          pickerResults.hidden = false;
+          pickerActiveIndex = -1;
+        }
+
+        function pickerSearch(q) {
+          q = q.trim().toLowerCase();
+          if (!q) { pickerResults.hidden = true; pickerResults.innerHTML = ""; return; }
+          var selected = {};
+          selectedSlugs().forEach(function (s) { selected[s] = true; });
+          var matches = data.companies.filter(function (c) {
+            return !selected[c.slug] && (
+              c.name.toLowerCase().indexOf(q) !== -1 ||
+              c.slug.toLowerCase().indexOf(q) !== -1 ||
+              c.group.toLowerCase().indexOf(q) !== -1
+            );
+          }).slice(0, 8);
+          pickerRender(matches);
+        }
+
+        function addFromPicker(slug) {
+          setChecked(slug, true);
+          pickerInput.value = "";
+          pickerResults.hidden = true;
+          pickerResults.innerHTML = "";
+          render();
+          pickerInput.focus();
+        }
+
+        pickerInput.addEventListener("input", function () { pickerSearch(pickerInput.value); });
+        pickerInput.addEventListener("focus", function () { if (pickerInput.value.trim()) pickerSearch(pickerInput.value); });
+        pickerInput.addEventListener("blur", function () { setTimeout(function () { pickerResults.hidden = true; }, 150); });
+        pickerInput.addEventListener("keydown", function (ev) {
+          var items = pickerResults.querySelectorAll(".cpr-item");
+          if (ev.key === "ArrowDown" && items.length) {
+            ev.preventDefault();
+            pickerActiveIndex = Math.min(pickerActiveIndex + 1, items.length - 1);
+            items.forEach(function (a, i) { a.classList.toggle("active", i === pickerActiveIndex); });
+            items[pickerActiveIndex].scrollIntoView({ block: "nearest" });
+          } else if (ev.key === "ArrowUp" && items.length) {
+            ev.preventDefault();
+            pickerActiveIndex = Math.max(pickerActiveIndex - 1, 0);
+            items.forEach(function (a, i) { a.classList.toggle("active", i === pickerActiveIndex); });
+          } else if (ev.key === "Enter") {
+            ev.preventDefault();
+            if (pickerActiveIndex >= 0 && items[pickerActiveIndex]) {
+              addFromPicker(items[pickerActiveIndex].dataset.slug);
+            } else if (items.length) {
+              addFromPicker(items[0].dataset.slug);
+            }
+          } else if (ev.key === "Escape") {
+            pickerResults.hidden = true;
+            pickerInput.blur();
+          }
+        });
+        pickerResults.addEventListener("mousedown", function (ev) {
+          var btn = ev.target.closest(".cpr-item");
+          if (btn) { ev.preventDefault(); addFromPicker(btn.dataset.slug); }
+        });
       }
 
       function hbar(rows, fmt, scalePct) {
@@ -178,6 +286,7 @@
       function render() {
         var slugs = selectedSlugs();
         if (countEl) countEl.textContent = slugs.length + "社選択中";
+        renderChips();
 
         var url = new URL(window.location.href);
         if (slugs.length) { url.searchParams.set("c", slugs.join(",")); } else { url.searchParams.delete("c"); }

@@ -1420,6 +1420,11 @@ def hikaku_page(companies: list[dict], groups: dict[str, list[dict]], fetched: s
   <span id="compare-count" class="compare-count">0社選択中</span>
   <button type="button" id="compare-clear">選択をクリア</button>
 </div>
+<div class="compare-picker">
+  <input type="search" id="compare-picker-input" class="compare-picker-input" placeholder="企業名で検索して追加（例：三菱商事）" autocomplete="off" aria-label="比較する企業を検索して追加">
+  <div id="compare-picker-results" class="search-results" hidden></div>
+</div>
+<div id="compare-chips" class="compare-chips" hidden></div>
 <div class="compare-groups">{"".join(group_blocks)}</div>
 <div id="compare-result"><p class="lead">上のリストから企業を選ぶと、ここに横比較が表示されます。</p></div>
 </div>
@@ -1759,7 +1764,7 @@ header.site>*{max-width:960px;margin:0 auto;padding:0 20px}
 .header-nav{margin-left:38px;padding-bottom:14px}
 .header-nav a{color:#c2caf1;font-size:13px;font-weight:700;text-decoration:none}
 .header-nav a:hover{color:#fff}
-header.site .site-search{margin-left:38px;padding-bottom:20px;max-width:360px}
+header.site .site-search{margin-left:max(38px,calc(50% - 442px));padding-bottom:20px;max-width:360px}
 header.site .search-input{width:100%;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);color:#fff;border-radius:7px;padding:8px 12px;font-size:13.5px}
 header.site .search-input::placeholder{color:#aab0d6}
 header.site .search-input:focus{outline:2px solid rgba(255,255,255,.5);outline-offset:1px}
@@ -1990,6 +1995,16 @@ footer.site>p{max-width:960px;margin:6px auto}
 .compare-toolbar button{font:inherit;font-weight:700;font-size:13.5px;padding:8px 16px;border-radius:6px;border:1px solid var(--line);background:var(--card);cursor:pointer}
 .compare-toolbar button:hover{border-color:#c7cff0}
 .compare-count{font-size:13px;color:var(--mut)}
+.compare-picker{position:relative;margin:0 0 10px}
+.compare-picker-input{width:100%;background:var(--card);border:1px solid var(--line);color:var(--fg);border-radius:7px;padding:9px 12px;font-size:14px}
+.compare-picker-input:focus{outline:2px solid rgba(47,75,214,.35);outline-offset:1px}
+.search-results .cpr-item{display:flex;width:100%;justify-content:space-between;gap:10px;padding:9px 12px;color:var(--fg);text-align:left;font:inherit;background:none;border:none;border-bottom:1px solid var(--line);cursor:pointer}
+.search-results .cpr-item:last-child{border-bottom:none}
+.search-results .cpr-item:hover,.search-results .cpr-item.active{background:#eef1fc}
+.compare-chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.compare-chip{display:inline-flex;align-items:center;gap:6px;background:var(--note);border:1px solid #d7ddf7;border-radius:999px;padding:4px 6px 4px 10px;font-size:13px}
+.compare-chip button{border:none;background:none;color:var(--mut);cursor:pointer;font-size:15px;line-height:1;padding:2px 4px;border-radius:999px}
+.compare-chip button:hover{background:rgba(0,0,0,.08);color:var(--fg)}
 .compare-groups{margin:8px 0 20px}
 .compare-groups details{background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden}
 .compare-groups summary{padding:12px 16px;cursor:pointer;font-weight:700;font-size:14px;list-style:none}
@@ -2377,6 +2392,9 @@ APP_JS = r"""(function () {
     var countEl = document.getElementById("compare-count");
     var clearBtn = document.getElementById("compare-clear");
     var checkboxes = root.querySelectorAll('input[type="checkbox"][data-slug]');
+    var pickerInput = document.getElementById("compare-picker-input");
+    var pickerResults = document.getElementById("compare-picker-results");
+    var chipsEl = document.getElementById("compare-chips");
 
     loadData().then(function (data) {
       var bySlug = {};
@@ -2386,6 +2404,111 @@ APP_JS = r"""(function () {
         return Array.prototype.slice.call(checkboxes)
           .filter(function (cb) { return cb.checked; })
           .map(function (cb) { return cb.dataset.slug; });
+      }
+
+      function setChecked(slug, checked) {
+        var cb = root.querySelector('input[type="checkbox"][data-slug="' + slug + '"]');
+        if (!cb) return;
+        cb.checked = checked;
+        if (checked) {
+          var det = cb.closest("details");
+          if (det) det.open = true;
+        }
+      }
+
+      function renderChips() {
+        if (!chipsEl) return;
+        var slugs = selectedSlugs();
+        if (!slugs.length) { chipsEl.hidden = true; chipsEl.innerHTML = ""; return; }
+        chipsEl.hidden = false;
+        chipsEl.innerHTML = slugs.map(function (s) {
+          var c = bySlug[s];
+          if (!c) return "";
+          return '<span class="compare-chip">' + logoImg(c.icon) + "<span>" + esc(c.short || c.name) +
+            '</span><button type="button" data-remove="' + esc(s) + '" aria-label="' + esc(c.name) + 'を比較から外す">×</button></span>';
+        }).join("");
+      }
+
+      if (chipsEl) {
+        chipsEl.addEventListener("click", function (ev) {
+          var btn = ev.target.closest("button[data-remove]");
+          if (!btn) return;
+          setChecked(btn.dataset.remove, false);
+          render();
+        });
+      }
+
+      if (pickerInput && pickerResults) {
+        var pickerActiveIndex = -1;
+
+        function pickerRender(matches) {
+          if (!matches.length) {
+            pickerResults.innerHTML = '<div class="sr-empty">一致する企業がありません</div>';
+            pickerResults.hidden = false;
+            return;
+          }
+          pickerResults.innerHTML = matches.map(function (c) {
+            return '<button type="button" class="cpr-item" data-slug="' + esc(c.slug) + '">' +
+              logoImg(c.icon) + "<span>" + esc(c.name) + '</span><span class="sr-group">' + esc(c.group) + "</span></button>";
+          }).join("");
+          pickerResults.hidden = false;
+          pickerActiveIndex = -1;
+        }
+
+        function pickerSearch(q) {
+          q = q.trim().toLowerCase();
+          if (!q) { pickerResults.hidden = true; pickerResults.innerHTML = ""; return; }
+          var selected = {};
+          selectedSlugs().forEach(function (s) { selected[s] = true; });
+          var matches = data.companies.filter(function (c) {
+            return !selected[c.slug] && (
+              c.name.toLowerCase().indexOf(q) !== -1 ||
+              c.slug.toLowerCase().indexOf(q) !== -1 ||
+              c.group.toLowerCase().indexOf(q) !== -1
+            );
+          }).slice(0, 8);
+          pickerRender(matches);
+        }
+
+        function addFromPicker(slug) {
+          setChecked(slug, true);
+          pickerInput.value = "";
+          pickerResults.hidden = true;
+          pickerResults.innerHTML = "";
+          render();
+          pickerInput.focus();
+        }
+
+        pickerInput.addEventListener("input", function () { pickerSearch(pickerInput.value); });
+        pickerInput.addEventListener("focus", function () { if (pickerInput.value.trim()) pickerSearch(pickerInput.value); });
+        pickerInput.addEventListener("blur", function () { setTimeout(function () { pickerResults.hidden = true; }, 150); });
+        pickerInput.addEventListener("keydown", function (ev) {
+          var items = pickerResults.querySelectorAll(".cpr-item");
+          if (ev.key === "ArrowDown" && items.length) {
+            ev.preventDefault();
+            pickerActiveIndex = Math.min(pickerActiveIndex + 1, items.length - 1);
+            items.forEach(function (a, i) { a.classList.toggle("active", i === pickerActiveIndex); });
+            items[pickerActiveIndex].scrollIntoView({ block: "nearest" });
+          } else if (ev.key === "ArrowUp" && items.length) {
+            ev.preventDefault();
+            pickerActiveIndex = Math.max(pickerActiveIndex - 1, 0);
+            items.forEach(function (a, i) { a.classList.toggle("active", i === pickerActiveIndex); });
+          } else if (ev.key === "Enter") {
+            ev.preventDefault();
+            if (pickerActiveIndex >= 0 && items[pickerActiveIndex]) {
+              addFromPicker(items[pickerActiveIndex].dataset.slug);
+            } else if (items.length) {
+              addFromPicker(items[0].dataset.slug);
+            }
+          } else if (ev.key === "Escape") {
+            pickerResults.hidden = true;
+            pickerInput.blur();
+          }
+        });
+        pickerResults.addEventListener("mousedown", function (ev) {
+          var btn = ev.target.closest(".cpr-item");
+          if (btn) { ev.preventDefault(); addFromPicker(btn.dataset.slug); }
+        });
       }
 
       function hbar(rows, fmt, scalePct) {
@@ -2420,6 +2543,7 @@ APP_JS = r"""(function () {
       function render() {
         var slugs = selectedSlugs();
         if (countEl) countEl.textContent = slugs.length + "社選択中";
+        renderChips();
 
         var url = new URL(window.location.href);
         if (slugs.length) { url.searchParams.set("c", slugs.join(",")); } else { url.searchParams.delete("c"); }

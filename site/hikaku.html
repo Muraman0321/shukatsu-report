@@ -9,8 +9,8 @@
 <meta property="og:title" content="企業を選んで比較する｜Shukatsu.com">
 <meta property="og:description" content="業界の枠を超えて、気になる1549社の中から自由に企業を選び、平均年間給与・女性管理職比率・男女の賃金の差異を横比較できます。">
 <meta property="og:type" content="website">
-<link rel="stylesheet" href="style.css?v=18f34d58">
-<script src="app.js?v=18f34d58" defer></script>
+<link rel="stylesheet" href="style.css?v=16014caf">
+<script src="app.js?v=16014caf" defer></script>
 </head>
 <body data-base="">
 <header class="site">
@@ -42,6 +42,11 @@
   <span id="compare-count" class="compare-count">0社選択中</span>
   <button type="button" id="compare-clear">選択をクリア</button>
 </div>
+<div class="compare-picker">
+  <input type="search" id="compare-picker-input" class="compare-picker-input" placeholder="企業名で検索して追加（例：三菱商事）" autocomplete="off" aria-label="比較する企業を検索して追加">
+  <div id="compare-picker-results" class="search-results" hidden></div>
+</div>
+<div id="compare-chips" class="compare-chips" hidden></div>
 <div class="compare-groups"><details>
 <summary>総合商社（7社）</summary>
 <div class="compare-checklist"><label><input type="checkbox" data-slug="mitsubishi-corporation"> 三菱商事</label><label><input type="checkbox" data-slug="mitsui-bussan"> <img class="co-logo" src="https://www.mitsui.com/assets/img/meta/apple-touch-icon.png" width="16" height="16" alt="">三井物産</label><label><input type="checkbox" data-slug="itochu"> 伊藤忠商事</label><label><input type="checkbox" data-slug="sumitomo-corporation"> 住友商事</label><label><input type="checkbox" data-slug="marubeni"> <img class="co-logo" src="https://www.marubeni.com/apple-touch-icon.png" width="16" height="16" alt="">丸紅</label><label><input type="checkbox" data-slug="toyota-tsusho"> <img class="co-logo" src="https://www.toyota-tsusho.com/english/app-files/img/symbol/apple-touch-icon.png" width="16" height="16" alt="">豊田通商</label><label><input type="checkbox" data-slug="sojitz"> <img class="co-logo" src="https://www.sojitz.com/common/favicon/safari-pinned-tab.svg" width="16" height="16" alt="">双日</label></div>
