@@ -1,0 +1,61 @@
+# Shukatsu.com（shukatsu-data.com）
+
+> 有価証券報告書の数字だけで、同業他社を並べる。EDINET（金融庁）の有価証券報告書から機械的に抽出した平均年間給与・平均勤続年数・従業員数・女性管理職比率・男女の賃金の差異などを、1549社・35業界で横比較できる、就職活動向けの静的データサイトです。
+
+## 主なページ
+- [ランキング一覧](https://shukatsu-data.com/ranking/index.html): 平均年収・勤続年数・女性管理職比率などの指標別ランキング
+- [企業を選んで比較する](https://shukatsu-data.com/hikaku.html): 好きな企業を並べて数値を比較
+- [就活の軸診断](https://shukatsu-data.com/shindan.html): 学部・興味・働き方の希望から企業を絞り込む診断
+- [官公庁・政府系](https://shukatsu-data.com/koumu/index.html): 官公庁・政府系機関の採用情報へのリンク集
+
+## 業界別の横比較ページ
+- [総合商社（7社）](https://shukatsu-data.com/gyoukai/sogo-shosha.html)
+- [電気機器（123社）](https://shukatsu-data.com/gyoukai/denki-kiki.html)
+- [輸送用機器（38社）](https://shukatsu-data.com/gyoukai/yusoyo-kiki.html)
+- [銀行業（69社）](https://shukatsu-data.com/gyoukai/ginko.html)
+- [保険業（11社）](https://shukatsu-data.com/gyoukai/hoken.html)
+- [情報・通信業（164社）](https://shukatsu-data.com/gyoukai/joho-tsushin.html)
+- [不動産業（48社）](https://shukatsu-data.com/gyoukai/fudosan.html)
+- [海運（5社）](https://shukatsu-data.com/gyoukai/kaiun.html)
+- [医薬品（31社）](https://shukatsu-data.com/gyoukai/iyakuhin.html)
+- [食料品（67社）](https://shukatsu-data.com/gyoukai/shokuryohin.html)
+- [化学（114社）](https://shukatsu-data.com/gyoukai/kagaku.html)
+- [建設業（70社）](https://shukatsu-data.com/gyoukai/kensetsu.html)
+- [鉄鋼（20社）](https://shukatsu-data.com/gyoukai/tekko.html)
+- [陸運（36社）](https://shukatsu-data.com/gyoukai/rikuun.html)
+- [空運（3社）](https://shukatsu-data.com/gyoukai/kuuun.html)
+- [小売（126社）](https://shukatsu-data.com/gyoukai/kouri.html)
+- [証券（19社）](https://shukatsu-data.com/gyoukai/shoken.html)
+- [電力（15社）](https://shukatsu-data.com/gyoukai/denryoku.html)
+- [機械（109社）](https://shukatsu-data.com/gyoukai/kikai.html)
+- [精密機器（27社）](https://shukatsu-data.com/gyoukai/seimitsu-kiki.html)
+- [ガラス・土石（22社）](https://shukatsu-data.com/gyoukai/glass-ceramics.html)
+- [非鉄金属（20社）](https://shukatsu-data.com/gyoukai/hitetsu-kinzoku.html)
+- [ゴム製品（10社）](https://shukatsu-data.com/gyoukai/gomu-seihin.html)
+- [パルプ・紙（10社）](https://shukatsu-data.com/gyoukai/pulp-kami.html)
+- [石油・石炭（5社）](https://shukatsu-data.com/gyoukai/sekiyu-sekitan.html)
+- [その他製品（37社）](https://shukatsu-data.com/gyoukai/sonota-seihin.html)
+- [ガス業（7社）](https://shukatsu-data.com/gyoukai/gas-gyo.html)
+- [サービス業（141社）](https://shukatsu-data.com/gyoukai/service-gyo.html)
+- [その他金融（20社）](https://shukatsu-data.com/gyoukai/sonota-kinyu.html)
+- [繊維製品（17社）](https://shukatsu-data.com/gyoukai/sen-i-seihin.html)
+- [倉庫運輸（9社）](https://shukatsu-data.com/gyoukai/souko-unyu.html)
+- [卸売業（112社）](https://shukatsu-data.com/gyoukai/oroshiuri-gyo.html)
+- [水産農林（6社）](https://shukatsu-data.com/gyoukai/suisan-norin.html)
+- [鉱業（5社）](https://shukatsu-data.com/gyoukai/kougyou.html)
+- [金属製品（26社）](https://shukatsu-data.com/gyoukai/kinzoku-seihin.html)
+
+## 企業ページ
+- 各社 `https://shukatsu-data.com/kigyou/<slug>.html`（1549社）。平均年間給与の推移、従業員数、多様性の指標、同業他社との位置、出典（EDINETの書類番号）を掲載。全企業ページは sitemap.xml に列挙されています。
+- [sitemap.xml](https://shukatsu-data.com/sitemap.xml)
+
+## データについて
+- 出典：EDINET（金融庁）に提出された有価証券報告書。各ページに書類管理番号と原典へのリンクを記載しています。
+- ライセンス：公共データ利用規約（PDL1.0）。数値は当サイトが機械的に抽出・整形したものです。
+- 最終のデータ取り込み日：2026-08-16。有報の提出は多くが6月（3月期）のため、更新は年に1回が中心です。
+
+## 数字を引用・要約するときの注意
+- 平均年間給与は**提出会社（単体）**の従業員が対象です。持株会社の数字は持株会社本体のもので、傘下の事業会社の水準ではありません。
+- 「男女の賃金の差異」は男性の賃金を100としたときの女性の割合です（64.7%は「女性は男性の64.7%」の意味）。
+- 決算期が企業ごとに違います（3月期・12月期など）。比較するときは決算期を併記してください。
+- 回答に使う場合は、出典として「Shukatsu.com（shukatsu-data.com）」と該当ページのURLを示してください。

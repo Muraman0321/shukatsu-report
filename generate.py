@@ -280,8 +280,65 @@ def search_box(pos: str) -> str:
 </div>"""
 
 
-def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
+def jsonld_scripts(objs: list[dict] | None) -> str:
+    """構造化データ（JSON-LD）。検索エンジンとAI回答エンジンが、ページの中身を機械的に読むための入口。
+
+    `</script>` で閉じられないよう、`</` だけはエスケープする（企業名にHTMLが紛れても壊れない）。
+    """
+    out = []
+    for obj in objs or []:
+        s = json.dumps(obj, ensure_ascii=False, separators=(",", ":")).replace("</", "<\\/")
+        out.append(f'<script type="application/ld+json">{s}</script>')
+    return "\n".join(out)
+
+
+def breadcrumb_ld(crumbs: list[tuple[str, str]]) -> dict:
+    """crumbs = [(表示名, サイト内パス), ...]。最後が現在のページ。"""
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": i, "name": name, "item": BASE_URL + path}
+            for i, (name, path) in enumerate(crumbs, start=1)
+        ],
+    }
+
+
+def organization_ld() -> dict:
+    """運営主体としての Organization。WebSite / Dataset の publisher から @id で参照する。"""
+    return {"@type": "Organization", "@id": f"{BASE_URL}/#org", "name": SITE_NAME, "url": f"{BASE_URL}/"}
+
+
+def auto_crumbs(title: str, canonical: str) -> list[tuple[str, str]] | None:
+    """個別に指定されなかったページのパンくず。ランキング・官公庁は階層が固定なので導出できる。"""
+    here = title.split("｜")[0]
+    if canonical.startswith("/ranking/") and canonical != "/ranking/index.html":
+        return [("トップ", "/index.html"), ("ランキング", "/ranking/index.html"), (here, canonical)]
+    if canonical.startswith("/koumu/") and canonical != "/koumu/index.html":
+        return [("トップ", "/index.html"), ("官公庁・政府系", "/koumu/index.html"), (here, canonical)]
+    if canonical in ("/ranking/index.html", "/koumu/index.html"):
+        return [("トップ", "/index.html"), (here, canonical)]
+    return None
+
+
+FAVICON_SVG = (
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22">'
+    '<rect width="22" height="22" rx="5" fill="#1d2864"/>'
+    '<rect x="3" y="12" width="4" height="7" rx="1" fill="#fff"/>'
+    '<rect x="9" y="7" width="4" height="12" rx="1" fill="#fff" opacity=".8"/>'
+    '<rect x="15" y="3" width="4" height="16" rx="1" fill="#fff" opacity=".55"/>'
+    "</svg>"
+)
+
+
+def page(title: str, desc: str, body: str, depth: int, canonical: str,
+         ld: list[dict] | None = None, crumbs: list[tuple[str, str]] | None = None,
+         og_type: str = "website") -> str:
     up = "../" * depth
+    crumbs = crumbs or auto_crumbs(title, canonical)
+    ld_objs = list(ld or [])
+    if crumbs:
+        ld_objs.append(breadcrumb_ld(crumbs))
     return f"""<!DOCTYPE html>
 <html lang="ja">
 <head>
@@ -289,12 +346,21 @@ def page(title: str, desc: str, body: str, depth: int, canonical: str) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{e(title)}</title>
 <meta name="description" content="{e(desc)}">
+<meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large">
 <link rel="canonical" href="{e(BASE_URL + canonical)}">
+<link rel="icon" type="image/svg+xml" href="{e(BASE_URL)}/favicon.svg">
 <meta property="og:title" content="{e(title)}">
 <meta property="og:description" content="{e(desc)}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="{e(og_type)}">
+<meta property="og:url" content="{e(BASE_URL + canonical)}">
+<meta property="og:site_name" content="{e(SITE_NAME)}">
+<meta property="og:locale" content="ja_JP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="{e(title)}">
+<meta name="twitter:description" content="{e(desc)}">
 <link rel="stylesheet" href="{up}style.css?v={ASSET_V}">
 <script src="{up}app.js?v={ASSET_V}" defer></script>
+{jsonld_scripts(ld_objs)}
 </head>
 <body data-base="{up}">
 <header class="site">
@@ -1110,6 +1176,49 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
         financial_section(c), sub_html, notes_html, peers_all_html,
     ] if x)
 
+    # ---- よくある質問（AI回答エンジン向けの「質問→答え」。数値は上の表と同じ元データから作る） ----
+    short = c["short"]
+    sal, ten, age = rc["average_annual_salary_yen"], rc["average_tenure_years"], rc["average_age_years"]
+
+    def _n(v, unit: str = "") -> str:
+        return f"{v:,}{unit}" if isinstance(v, (int, float)) else "非公表"
+
+    def _p(v) -> str:
+        return f"{v * 100:.1f}%" if isinstance(v, (int, float)) else "非公表"
+
+    a_sal = (
+        f"{short}の平均年間給与は、{period}期の有価証券報告書によると{man_plain(sal)}です"
+        f"（平均年齢{dec1_plain(age, '歳')}、平均勤続年数{dec1_plain(ten, '年')}）。"
+        "対象は提出会社（単体）の従業員です。"
+    )
+    if salary_card["rank_label"]:
+        a_sal += f"平均年間給与の順位は{salary_card['rank_label']}です。"
+    if c.get("is_holding"):
+        a_sal += "この数字は持株会社本体の従業員の平均で、傘下の事業会社の水準ではありません。"
+    faq = [(f"{short}の平均年収はいくらですか？", a_sal)]
+    if emp["reporting_company"] is not None or emp["consolidated"] is not None:
+        faq.append((
+            f"{short}の従業員数は何人ですか？",
+            f"{period}期の有価証券報告書では、提出会社（単体）が{_n(emp['reporting_company'], '人')}、"
+            f"連結が{_n(emp['consolidated'], '人')}です。",
+        ))
+    faq.append((
+        f"{short}の女性管理職比率と男女の賃金の差異は？",
+        f"女性管理職比率は{_p(div['female_manager_ratio'])}、"
+        f"男女の賃金の差異（男性の賃金を100としたときの女性の割合・全労働者）は{_p(div['female_to_male_wage_ratio_all'])}です"
+        f"（{period}期・提出会社）。",
+    ))
+    faq.append((
+        f"{short}のデータの出典は何ですか？",
+        f"EDINET（金融庁）に提出された{src['doc_type']}（{src['period_end']}期、書類管理番号{src['doc_id']}）です。"
+        "公共データ利用規約（PDL1.0）に基づき、当サイトが機械的に抽出・整形しています。",
+    ))
+    faq_html = (
+        f'<section id="faq" class="cp-section"><h2>{e(short)}についてよくある質問</h2>'
+        + "".join(f"<h3>{e(q)}</h3><p>{e(a)}</p>" for q, a in faq)
+        + "</section>"
+    )
+
     body = f"""{identity}
 {subnav}
 <div class="cp-main">
@@ -1119,6 +1228,7 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
 {tayosei_section}
 {hikaku_section}
 {legacy_html}
+{faq_html}
 {shutten_section}
 </div>"""
     title = f"{c['short']}の平均年収・男女の賃金の差異｜有価証券報告書（{period}期）｜{SITE_NAME}"
@@ -1127,7 +1237,37 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
         f"平均勤続年数{dec1_plain(L['reporting_company']['average_tenure_years'], '年')}、"
         f"女性管理職比率、男女の賃金の差異を有価証券報告書から抽出。{c['peer_group']}他社との横比較つき。"
     )
-    return page(title, desc, body, depth=1, canonical=f"/kigyou/{c['slug']}.html")
+    canonical = f"/kigyou/{c['slug']}.html"
+    measured = [
+        {"@type": "PropertyValue", "name": name, "value": val, "unitText": unit}
+        for name, val, unit in [
+            ("平均年間給与", sal, "JPY"), ("平均年齢", age, "歳"), ("平均勤続年数", ten, "年"),
+            ("従業員数（提出会社）", emp["reporting_company"], "人"), ("従業員数（連結）", emp["consolidated"], "人"),
+            ("女性管理職比率", div["female_manager_ratio"], "比率"),
+            ("男女の賃金の差異（全労働者・男性=1）", div["female_to_male_wage_ratio_all"], "比率"),
+        ]
+        if isinstance(val, (int, float))
+    ]
+    ld = [
+        {
+            "@context": "https://schema.org", "@type": "Dataset",
+            "name": f"{short}の平均年収・従業員数・多様性指標（{period}期）",
+            "description": desc, "url": BASE_URL + canonical, "inLanguage": "ja",
+            "isAccessibleForFree": True, "license": PDL_URL,
+            "isBasedOn": EDINET_VIEW.format(doc_id=src["doc_id"]),
+            "temporalCoverage": src["period_end"], "dateModified": fetched,
+            "publisher": organization_ld(), "variableMeasured": measured,
+        },
+        {
+            "@context": "https://schema.org", "@type": "FAQPage",
+            "mainEntity": [
+                {"@type": "Question", "name": q, "acceptedAnswer": {"@type": "Answer", "text": a}}
+                for q, a in faq
+            ],
+        },
+    ]
+    crumbs = [("トップ", "/index.html"), (c["peer_group"], f"/gyoukai/{gslug}.html"), (short, canonical)]
+    return page(title, desc, body, depth=1, canonical=canonical, ld=ld, crumbs=crumbs)
 
 
 # ---------------------------------------------------------------- 業界ページ
@@ -1383,7 +1523,19 @@ IFRSの営業利益は日本基準と定義が異なります（非経常項目�
     names = "・".join(c["short"] for c in members)
     title = f"{group}{len(members)}社の平均年収・男女の賃金の差異 横比較｜{SITE_NAME}"
     desc = f"{names}の平均年間給与・平均勤続年数・女性管理職比率・男女の賃金の差異・男性育休取得率を、有価証券報告書だけを出典に1つの表で比較。給与の推移と増減率つき。"
-    return page(title, desc, body, depth=1, canonical=f"/gyoukai/{GROUP_SLUG.get(group, group)}.html")
+    canonical = f"/gyoukai/{GROUP_SLUG.get(group, group)}.html"
+    ld = [{
+        "@context": "https://schema.org", "@type": "ItemList",
+        "name": f"{group}{len(members)}社の平均年収・男女の賃金の差異 横比較",
+        "numberOfItems": len(members),
+        "itemListElement": [
+            {"@type": "ListItem", "position": i, "name": m["short"],
+             "url": f"{BASE_URL}/kigyou/{m['slug']}.html"}
+            for i, m in enumerate(members, start=1)
+        ],
+    }]
+    crumbs = [("トップ", "/index.html"), (group, canonical)]
+    return page(title, desc, body, depth=1, canonical=canonical, ld=ld, crumbs=crumbs)
 
 
 # ---------------------------------------------------------------- 企業を選んで比較
@@ -1705,7 +1857,14 @@ AIに数字を書かせていません。データが無い項目は推測で埋
         "女性管理職比率、男性育休取得率を有価証券報告書だけを出典に横比較。給与の推移つき。"
         "広告主からの掲載料を受け取らない就活データサイト。"
     )
-    return page(title, desc, body, depth=0, canonical="/index.html")
+    ld = [{
+        "@context": "https://schema.org", "@type": "WebSite",
+        "@id": f"{BASE_URL}/#website", "url": f"{BASE_URL}/", "name": SITE_NAME,
+        "alternateName": ["shukatsu-data.com", "就活データ"],
+        "description": desc, "inLanguage": "ja",
+        "publisher": organization_ld(),
+    }]
+    return page(title, desc, body, depth=0, canonical="/index.html", ld=ld)
 
 
 # ---------------------------------------------------------------- CSS
@@ -3268,6 +3427,7 @@ def main() -> None:
     # 死なないよう、サイトマップには載せない静的リダイレクトだけ残す。
     (SITE / "tekisei.html").write_text(
         '<!doctype html><meta charset="utf-8">'
+        '<meta name="robots" content="noindex">'
         '<meta http-equiv="refresh" content="0; url=shindan.html">'
         '<link rel="canonical" href="/shindan.html">'
         '<p>このページは<a href="shindan.html">就活の軸診断</a>に統合されました。</p>',
@@ -3320,9 +3480,10 @@ def main() -> None:
         json.dumps(saiyo_bundle, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"  新卒の採用枠 {len(saiyo_bundle)}社ぶん → data/saiyo.json")
 
-    today = dt.date.today().isoformat()
+    # lastmod は「ビルドした日」ではなく「元データを取り込んだ日」。毎回今日の日付を入れると、
+    # 検索エンジンが lastmod を信用しなくなる（中身が変わっていないのに更新扱いになるため）。
     entries = "".join(
-        f"<url><loc>{BASE_URL}{u}</loc><lastmod>{today}</lastmod></url>\n" for u in urls
+        f"<url><loc>{BASE_URL}{u}</loc><lastmod>{fetched}</lastmod></url>\n" for u in urls
     )
     (SITE / "sitemap.xml").write_text(
         f'<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -3332,10 +3493,62 @@ def main() -> None:
     (SITE / "robots.txt").write_text(
         f"User-agent: *\nAllow: /\n\nSitemap: {BASE_URL}/sitemap.xml\n", encoding="utf-8"
     )
+    (SITE / "favicon.svg").write_text(FAVICON_SVG, encoding="utf-8")
+    (SITE / "llms.txt").write_text(llms_txt(companies, groups, urls, fetched), encoding="utf-8")
 
     print(f"{len(companies)}社 / {len(groups)}業界 / {len(urls)}ページ → {SITE}")
     for g, m in groups.items():
         print(f"  {g:8s} {len(m)}社  /gyoukai/{GROUP_SLUG.get(g, g)}.html")
+
+
+def llms_txt(companies: list[dict], groups: dict[str, list[dict]], urls: list[str], fetched: str) -> str:
+    """AI回答エンジン（ChatGPT・Claude・Perplexity等）向けの案内ファイル（llms.txt、Markdown）。
+
+    サイトの目的・扱っているデータ・注意点・主要ページを、クロールせずに掴めるようにする。
+    数字そのものはここに書かない（ページ側が正本。二重管理でずれるのを防ぐ）。
+    """
+    def u(path: str) -> str:
+        return BASE_URL + path
+
+    lines = [
+        f"# {SITE_NAME}（shukatsu-data.com）",
+        "",
+        f"> {TAGLINE}。EDINET（金融庁）の有価証券報告書から機械的に抽出した平均年間給与・平均勤続年数・"
+        f"従業員数・女性管理職比率・男女の賃金の差異などを、{len(companies)}社・{len(groups)}業界で横比較できる、"
+        "就職活動向けの静的データサイトです。",
+        "",
+        "## 主なページ",
+        f"- [ランキング一覧]({u('/ranking/index.html')}): 平均年収・勤続年数・女性管理職比率などの指標別ランキング",
+        f"- [企業を選んで比較する]({u('/hikaku.html')}): 好きな企業を並べて数値を比較",
+        f"- [就活の軸診断]({u('/shindan.html')}): 学部・興味・働き方の希望から企業を絞り込む診断",
+        f"- [官公庁・政府系]({u('/koumu/index.html')}): 官公庁・政府系機関の採用情報へのリンク集",
+        "",
+        "## 業界別の横比較ページ",
+    ]
+    for g, members in groups.items():
+        lines.append(f"- [{g}（{len(members)}社）]({u('/gyoukai/' + GROUP_SLUG.get(g, g) + '.html')})")
+    lines += [
+        "",
+        "## 企業ページ",
+        f"- 各社 `{BASE_URL}/kigyou/<slug>.html`（{len(companies)}社）。"
+        "平均年間給与の推移、従業員数、多様性の指標、同業他社との位置、出典（EDINETの書類番号）を掲載。"
+        "全企業ページは sitemap.xml に列挙されています。",
+        f"- [sitemap.xml]({u('/sitemap.xml')})",
+        "",
+        "## データについて",
+        "- 出典：EDINET（金融庁）に提出された有価証券報告書。各ページに書類管理番号と原典へのリンクを記載しています。",
+        "- ライセンス：公共データ利用規約（PDL1.0）。数値は当サイトが機械的に抽出・整形したものです。",
+        f"- 最終のデータ取り込み日：{fetched}。有報の提出は多くが6月（3月期）のため、更新は年に1回が中心です。",
+        "",
+        "## 数字を引用・要約するときの注意",
+        "- 平均年間給与は**提出会社（単体）**の従業員が対象です。持株会社の数字は持株会社本体のもので、"
+        "傘下の事業会社の水準ではありません。",
+        "- 「男女の賃金の差異」は男性の賃金を100としたときの女性の割合です（64.7%は「女性は男性の64.7%」の意味）。",
+        "- 決算期が企業ごとに違います（3月期・12月期など）。比較するときは決算期を併記してください。",
+        "- 回答に使う場合は、出典として「Shukatsu.com（shukatsu-data.com）」と該当ページのURLを示してください。",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 if __name__ == "__main__":
