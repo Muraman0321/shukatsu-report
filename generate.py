@@ -862,6 +862,145 @@ def ring_style(pct_value: float | None, color: str) -> str:
     return f"background:conic-gradient({color} 0 {clamped:.1f}%,#eef0f4 {clamped:.1f}% 100%)"
 
 
+def _median(vals: list[float]) -> float | None:
+    vals = sorted(v for v in vals if isinstance(v, (int, float)))
+    if not vals:
+        return None
+    mid = len(vals) // 2
+    return vals[mid] if len(vals) % 2 else (vals[mid - 1] + vals[mid]) / 2
+
+
+def _salary_cagr(c: dict) -> tuple[float, float, float] | None:
+    """平均年間給与の年率変化。(年率, 期間の年数, 期間の合計変化率) を返す。
+
+    算定基準が変わった会社（salary_trend_comparable が偽）、2期分に満たない会社、
+    期間が1.5年に満たない会社は出さない。比較できない数字を並べると嘘になる。
+    """
+    if not c.get("salary_trend_comparable"):
+        return None
+    items = sorted((c.get("trend") or {}).get("average_annual_salary_yen", {}).items())
+    items = [(k, v) for k, v in items if isinstance(v, (int, float)) and v > 0]
+    if len(items) < 2:
+        return None
+    (k0, v0), (k1, v1) = items[0], items[-1]
+    years = (dt.date.fromisoformat(k1) - dt.date.fromisoformat(k0)).days / 365.25
+    if years < 1.5:
+        return None
+    return ((v1 / v0) ** (1 / years) - 1) * 100, years, (v1 / v0 - 1) * 100
+
+
+_PEER_STATS: dict[str, dict] = {}
+
+
+def _peer_stats(peers: list[dict]) -> dict:
+    """業界ごとの中央値。企業ページ1,549枚で同じ業界を何度も計算しないよう業界単位でキャッシュする。"""
+    key = peers[0]["peer_group"]
+    if key not in _PEER_STATS:
+        rc = lambda x, k: x["latest"]["reporting_company"][k]  # noqa: E731
+        cagrs = [r[0] for r in (_salary_cagr(x) for x in peers) if r]
+        _PEER_STATS[key] = {
+            "salary": _median([rc(x, "average_annual_salary_yen") for x in peers]),
+            "tenure": _median([rc(x, "average_tenure_years") for x in peers]),
+            "age": _median([rc(x, "average_age_years") for x in peers]),
+            "fm": _median([x["latest"]["diversity"]["female_manager_ratio"] for x in peers]),
+            "wage": _median([x["latest"]["diversity"]["female_to_male_wage_ratio_all"] for x in peers]),
+            "cagr": _median(cagrs),
+            "cagr_n": len(cagrs),
+            "n_salary": sum(1 for x in peers if rc(x, "average_annual_salary_yen") is not None),
+        }
+    return _PEER_STATS[key]
+
+
+def _vs(v: float, med: float, hi: str, lo: str, tol: float) -> str:
+    """中央値との比較を言葉にする。差が許容幅 tol 以内なら「ほぼ同水準」とし、大小を言い切らない。"""
+    if abs(v - med) <= tol:
+        return "ほぼ同水準"
+    return hi if v > med else lo
+
+
+def reading_section(c: dict, peers: list[dict]) -> str:
+    """「この会社の数字の位置づけ」。同じ業界の中央値との比較を、元データから機械的に文章にする。
+
+    企業ページは数字の並びが主で、会社ごとの文章がほとんど無かった。ここで書くのは算術で言える
+    ことだけ（中央値との大小・年率・割合）。理由の推測や評価（「高水準」「働きやすい」等）は書かない。
+    データが無い項目の文は出さない（非公表を0や平均で埋めない、という鉄則に従う）。
+    """
+    L = c["latest"]
+    rc, emp, div = L["reporting_company"], L["employees"], L["diversity"]
+    st = _peer_stats(peers)
+    group, short = c["peer_group"], c["short"]
+    sents: list[str] = []
+
+    sal, med_sal = rc["average_annual_salary_yen"], st["salary"]
+    if isinstance(sal, int) and med_sal and st["n_salary"] >= 3:
+        diff = round(abs(sal - med_sal) / 10000)
+        rel = _vs(sal, med_sal, f"{diff:,}万円高く", f"{diff:,}万円低く", med_sal * 0.01)
+        head = f"{short}の平均年間給与は{man_plain(sal)}で、{group}{st['n_salary']}社の中央値（{man_plain(int(round(med_sal)))}）"
+        sents.append(
+            head + ("とほぼ同水準です。" if rel == "ほぼ同水準"
+                    else f"より{rel}、中央値の{sal / med_sal:.2f}倍です。")
+        )
+
+    g = _salary_cagr(c)
+    if g:
+        cagr, years, total = g
+        s = (f"有価証券報告書に載る{years:.0f}年間で、平均年間給与は合計{total:+.1f}%、年率に直すと{cagr:+.1f}%の変化です。")
+        if st["cagr"] is not None and st["cagr_n"] >= 3:
+            rel = _vs(cagr, st["cagr"], "上回って", "下回って", 0.3)
+            s += (f"同じ条件で比べられる{group}{st['cagr_n']}社の年率の中央値は{st['cagr']:+.1f}%で、"
+                  + ("ほぼ同水準です。" if rel == "ほぼ同水準" else f"{short}はこれを{rel}います。"))
+        sents.append(s)
+
+    ten, age = rc["average_tenure_years"], rc["average_age_years"]
+    parts = []
+    if isinstance(ten, (int, float)) and st["tenure"] is not None:
+        r = _vs(ten, st["tenure"], "長い", "短い", 0.3)
+        parts.append(f"平均勤続年数は{ten:.1f}年（同業中央値{st['tenure']:.1f}年より"
+                     + ("ほぼ同水準）" if r == "ほぼ同水準" else f"{r}）"))
+    if isinstance(age, (int, float)) and st["age"] is not None:
+        r = _vs(age, st["age"], "高い", "低い", 0.3)
+        parts.append(f"平均年齢は{age:.1f}歳（同{st['age']:.1f}歳より"
+                     + ("ほぼ同水準）" if r == "ほぼ同水準" else f"{r}）"))
+    if parts:
+        sents.append("、".join(parts) + "です。")
+
+    fm, wr = div["female_manager_ratio"], div["female_to_male_wage_ratio_all"]
+    parts = []
+    if isinstance(fm, (int, float)) and st["fm"] is not None:
+        r = _vs(fm, st["fm"], "高い", "低い", 0.005)
+        parts.append(f"女性管理職比率は{fm * 100:.1f}%（同業中央値{st['fm'] * 100:.1f}%より"
+                     + ("ほぼ同水準）" if r == "ほぼ同水準" else f"{r}）"))
+    if isinstance(wr, (int, float)) and st["wage"] is not None:
+        r = _vs(wr, st["wage"], "高い", "低い", 0.005)
+        parts.append(f"男女の賃金の差異（男性を100とした女性の割合）は{wr * 100:.1f}%（同{st['wage'] * 100:.1f}%より"
+                     + ("ほぼ同水準）" if r == "ほぼ同水準" else f"{r}）"))
+    if parts:
+        sents.append("、".join(parts) + "です。")
+
+    single, cons = emp["reporting_company"], emp["consolidated"]
+    if isinstance(single, int) and isinstance(cons, int) and cons > 0:
+        share = single / cons * 100
+        s = f"従業員数は提出会社{single:,}人、連結{cons:,}人で、提出会社は連結の{share:.0f}%にあたります。"
+        if share < 50:
+            s += "連結従業員の過半はグループ会社に所属しているため、上の年収は提出会社の従業員の平均であり、グループ全体の水準ではありません。"
+        sents.append(s)
+    if isinstance(cons, int):
+        sizes = sorted(
+            (x["latest"]["employees"]["consolidated"] for x in peers
+             if isinstance(x["latest"]["employees"]["consolidated"], int)), reverse=True)
+        if sizes:
+            sents.append(f"連結従業員数は{group}{len(sizes)}社中{sizes.index(cons) + 1}位です。")
+
+    if len(sents) < 2:
+        return ""
+    lis = "".join(f"<li>{e(s)}</li>" for s in sents)
+    return f"""<section id="ichi" class="cp-section">
+<h2>{e(short)}の数字の位置づけ</h2>
+<p class="cp-lead">{e(group)}の中央値と比べた{e(short)}の数字です。有価証券報告書の値から機械的に計算しており、評価や理由の推測は含みません。</p>
+<ul class="cp-reading">{lis}</ul>
+</section>"""
+
+
 def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str, newest: dt.date) -> str:
     L = c["latest"]
     emp, rc, div = L["employees"], L["reporting_company"], L["diversity"]
@@ -916,7 +1055,7 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
 
     # ---- sticky sub-nav（採用枠タブはJS側 initSaiyoInject が該当会社だけ動的追加） ----
     sections = [
-        ("基本データ", "#kihon"), ("給与の推移", "#suii"), ("多様性の指標", "#tayosei"),
+        ("基本データ", "#kihon"), ("位置づけ", "#ichi"), ("給与の推移", "#suii"), ("多様性の指標", "#tayosei"),
         ("同業他社と比較", "#hikaku"), ("出典", "#shutten"),
     ]
     subnav = '<div class="cp-subnav"><div class="cp-subnav-inner">' + "".join(
@@ -961,6 +1100,8 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
 <details class="cp-details"><summary>この数字の読み方<span class="cp-details-hint">（平均年間給与の分母について）</span></summary>
 <p>{SALARY_CAVEAT}</p></details>
 </section>"""
+
+    ichi_section = reading_section(c, peers)
 
     # ---- 平均年間給与の推移 ----
     items = sorted(c["trend"]["average_annual_salary_yen"].items())
@@ -1163,12 +1304,17 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
         items_html = "".join(f"<li>{e(n)}</li>" for n in notes)
         notes_html = f'<section class="notes"><h2>抽出上の注記</h2><ul>{items_html}</ul></section>'
 
-    peer_links = " ".join(
-        f'<a href="{e(x["slug"])}.html">{e(x["short"])}</a>' for x in peers if x["edinet_code"] != c["edinet_code"]
-    )
+    # 同業の全社名を毎ページに並べると、120社前後の同じ社名リストがページ本文の約3分の1を占め、
+    # どの企業ページも似た文面になる。平均年間給与の順位が近い会社だけを出し、全社は業界ページへ誘導する。
+    ranked_peers = sorted(peers, key=lambda x: sort_key(x["latest"]["reporting_company"]["average_annual_salary_yen"], True))
+    pos = next((i for i, x in enumerate(ranked_peers) if x["edinet_code"] == c["edinet_code"]), 0)
+    lo = max(0, min(pos - 5, len(ranked_peers) - 11))
+    near_sal = [x for x in ranked_peers[lo:lo + 11] if x["edinet_code"] != c["edinet_code"]]
+    peer_links = " ".join(f'<a href="{e(x["slug"])}.html">{e(x["short"])}</a>' for x in near_sal)
     peers_all_html = f"""<section class="peers">
-<h2>{e(c["peer_group"])}の全社</h2>
+<h2>平均年間給与の順位が近い{e(c["peer_group"])}の会社</h2>
 <p class="small">{peer_links}</p>
+<p class="small"><a href="../gyoukai/{e(gslug)}.html">{e(c["peer_group"])}{len(peers)}社の一覧と比較表を見る →</a></p>
 </section>""" if peer_links else ""
 
     legacy_html = "\n".join(x for x in [
@@ -1224,6 +1370,7 @@ def company_page(c: dict, peers: list[dict], companies: list[dict], fetched: str
 <div class="cp-main">
 {prose_html}
 {kihon_section}
+{ichi_section}
 {suii_section}
 {tayosei_section}
 {hikaku_section}
@@ -1283,6 +1430,52 @@ PEER_COLS = [
     ("女性管理職比率", lambda c: c["latest"]["diversity"]["female_manager_ratio"], lambda v: pct(v), True),
     ("男女の賃金の差異", lambda c: c["latest"]["diversity"]["female_to_male_wage_ratio_all"], lambda v: pct(v), True),
 ]
+
+
+def group_summary(group: str, members: list[dict]) -> str:
+    """業界ページの冒頭に置く要約。業界全体の中央値・最高/最低・伸び率を算術だけで文章にする。
+
+    業界ページは表とグラフだけで、そのページ固有の文章が無かった。ここも評価や理由の推測は書かず、
+    非公表の会社は母数から外して「開示N社」と明記する。
+    """
+    rc = lambda c, k: c["latest"]["reporting_company"][k]  # noqa: E731
+    sal = [(c, rc(c, "average_annual_salary_yen")) for c in members if isinstance(rc(c, "average_annual_salary_yen"), int)]
+    if len(sal) < 3:
+        return ""
+    sents = []
+    vals = [v for _, v in sal]
+    top, bot = max(sal, key=lambda x: x[1]), min(sal, key=lambda x: x[1])
+    sents.append(
+        f"{group}{len(members)}社のうち平均年間給与を開示している{len(sal)}社の中央値は{man_plain(int(round(_median(vals))))}です。"
+        f"最も高いのは{top[0]['short']}（{man_plain(top[1])}）、最も低いのは{bot[0]['short']}（{man_plain(bot[1])}）で、"
+        f"差は{round((top[1] - bot[1]) / 10000):,}万円あります。"
+    )
+    g = [(c, r) for c, r in ((c, _salary_cagr(c)) for c in members) if r]
+    if len(g) >= 3:
+        best = max(g, key=lambda x: x[1][0])
+        sents.append(
+            f"平均年間給与の年率変化を比べられる{len(g)}社の中央値は{_median([r[0] for _, r in g]):+.1f}%で、"
+            f"最も伸びているのは{best[0]['short']}（年率{best[1][0]:+.1f}%）です。"
+        )
+    ten = [rc(c, "average_tenure_years") for c in members]
+    age = [rc(c, "average_age_years") for c in members]
+    mt, ma = _median(ten), _median(age)
+    if mt is not None and ma is not None:
+        sents.append(f"平均勤続年数の中央値は{mt:.1f}年、平均年齢の中央値は{ma:.1f}歳です。")
+    fm = [c["latest"]["diversity"]["female_manager_ratio"] for c in members]
+    wr = [c["latest"]["diversity"]["female_to_male_wage_ratio_all"] for c in members]
+    nfm, nwr = sum(isinstance(v, (int, float)) for v in fm), sum(isinstance(v, (int, float)) for v in wr)
+    if nfm >= 3 and nwr >= 3:
+        sents.append(
+            f"女性管理職比率の中央値は{_median(fm) * 100:.1f}%（開示{nfm}社）、"
+            f"男女の賃金の差異（男性を100とした女性の割合・全労働者）の中央値は{_median(wr) * 100:.1f}%（開示{nwr}社）です。"
+        )
+    lis = "".join(f"<li>{e(t)}</li>" for t in sents)
+    return f"""<section>
+<h2>{e(group)}の数字の概観</h2>
+<ul class="cp-reading">{lis}</ul>
+<p class="caveat">いずれも提出会社（単体）の数字から機械的に計算した中央値で、持株会社は本体の数字です。評価や理由の推測は含みません。</p>
+</section>"""
 
 
 def group_page(group: str, members: list[dict], fetched: str) -> str:
@@ -1473,6 +1666,8 @@ IFRSの営業利益は日本基準と定義が異なります（非経常項目�
 <h1>{e(group)}{len(members)}社の平均年収・男女の賃金の差異 横比較</h1>
 <p class="lead">有価証券報告書だけを出典に、{e(group)}{len(members)}社を1つの表に並べました。
 広告主の都合が入らないよう、掲載企業に費用は請求していません。並び順は平均年間給与の高い順です。</p>
+
+{group_summary(group, members)}
 
 <section>
 <h2>平均年間給与</h2>
@@ -2245,6 +2440,8 @@ html,body{overflow-x:hidden}
 .cp-details-hint{font-size:11px;color:#8a93a3;font-weight:400;margin-left:6px}
 .cp-details p{margin:0 0 16px;font-size:13.5px;color:#3d4453;line-height:1.85}
 .cp-lead{margin:0 0 18px;font-size:13.5px;color:#66707f}
+.cp-reading{margin:0;padding-left:1.2em;font-size:14.5px;line-height:1.85}
+.cp-reading li{margin:0 0 8px}
 
 /* ---- 企業ページ：アイデンティティ帯 ---- */
 .cp-identity{background:#fff;border-bottom:1px solid #e3e6ec;margin:0 -20px 20px;padding:26px 20px 22px}
